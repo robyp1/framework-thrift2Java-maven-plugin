@@ -114,6 +114,10 @@ da dentro la cartella del progetto:
 "C:\Program Files (x86)\Apache\cxf\apache-cxf-3.2.2\bin\java2ws" -cp "./target/drift-thrift-api-1.0.1-SNAPSHOT.jar;C:\Progetti\.m2\repository\org\apache\thrift\libthrift\0.11.0\libthrift-0.11.0.jar" -verbose -wsdl -o calculator.wsdl drift.drift.thrift.api.tutorial.Calculator$Iface
 '''
 
+### Riferimenti per lo sviluppo
+Mojo-Executor, per eseguire un plugin da un plugin:
+https://github.com/TimMoore/mojo-executor
+
 
 
 $ git remote add origin file:///share/git/project-X
