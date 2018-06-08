@@ -125,6 +125,10 @@ per compilarlo basta fare mvn install
 dopodichè andrà messo su nexus con mvn deploy ...
 Ho messo skipTest a true nel pom perchè i test hanno problemi forse mancano delle configurazioni.
 
+Per i test ho usato il plugin.
+http://maven.apache.org/plugin-testing/maven-plugin-testing-harness/
+
+http://thrift.apache.org/
 
 $ git remote add origin file:///share/git/project-X
 -->file://cad1652/generali_dev/gitrepo

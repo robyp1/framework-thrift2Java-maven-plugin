@@ -81,9 +81,11 @@ public class Thrift2JavaMojo extends AbstractMojo {
 
 
     public void execute() throws MojoExecutionException, MojoFailureException {
+        getLog().info("Executing genjava" + "thriftExecutable: "  + thriftExecutable
+        + "reading thrift from dir: " + thriftSourceRoot + " write java output to dir " + outputDirectory);
         thriftPluginExecution();
 
-//      throw new MojoExecutionException("todo: implementare execute");
+//      throw new MojoExecutionException("implementare execute");
     }
 
 
