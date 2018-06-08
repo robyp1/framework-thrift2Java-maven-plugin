@@ -81,8 +81,8 @@ public class Thrift2JavaMojo extends AbstractMojo {
 
 
     public void execute() throws MojoExecutionException, MojoFailureException {
-        getLog().info("Executing genjava" + "thriftExecutable: "  + thriftExecutable
-        + "reading thrift from dir: " + thriftSourceRoot + " write java output to dir " + outputDirectory);
+        getLog().info("Executing genjava " + " thriftExecutable: "  + thriftExecutable
+        + " reading thrift from dir: " + thriftSourceRoot + " write java output to dir " + outputDirectory);
         thriftPluginExecution();
 
 //      throw new MojoExecutionException("implementare execute");
@@ -123,9 +123,9 @@ public class Thrift2JavaMojo extends AbstractMojo {
     public void thriftPluginExecution () throws MojoExecutionException {
         executeMojo(
                 plugin(
-                        groupId("org.apache.thrift.tools"),
-                         artifactId("maven-thrift-plugin"),
-                        version("0.1.11")
+                        groupId("org.apache.thrift"),
+                        artifactId("thrift-maven-plugin"),
+                        version("1.0-SNAPSHOT")
                 ),
                 goal("compile"),
                 configuration(

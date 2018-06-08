@@ -5,6 +5,7 @@ import org.apache.maven.plugin.testing.AbstractMojoTestCase;
 
 import java.io.File;
 
+
 public class Thrift2JavaTest extends AbstractMojoTestCase {
 
 
