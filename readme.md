@@ -117,7 +117,13 @@ da dentro la cartella del progetto:
 ### Riferimenti per lo sviluppo
 Mojo-Executor, per eseguire un plugin da un plugin:
 https://github.com/TimMoore/mojo-executor
-
+pechè il plugin chiamata mojo
+thrift-plugin il cui sorgente che ho installato nella mia .m2 e che ho preso da
+https://github.com/apache/thrift/tree/master/contrib/thrift-maven-plugin
+è nella directory thrifplugin del progetto
+per compilarlo basta fare mvn install
+dopodichè andrà messo su nexus con mvn deploy ...
+Ho messo skipTest a true nel pom perchè i test hanno problemi forse mancano delle configurazioni.
 
 
 $ git remote add origin file:///share/git/project-X
