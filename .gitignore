@@ -1,0 +1,5 @@
+/target/*
+.hgignore
+nb-configuration.xml
+.hg/*
+.git/*
