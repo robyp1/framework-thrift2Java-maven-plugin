@@ -9,8 +9,11 @@ import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 
 import java.io.*;
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 
 /**
@@ -51,12 +54,34 @@ public class Java2CxfWsMojo extends AbstractMojo {
     @Parameter(defaultValue = "${project.basedir}/src/main/resources/META-INF/drift-services.list", readonly = true)
     private File serviceListFile;
 
+    @Parameter(defaultValue = "/drift", readonly = true)
+    private String driftClass;
+
+    @Parameter(defaultValue = "${project.build.directory}/classes/drift", readonly = true)
+    private File directoryClassAbsolute;
+
+
 
     public void execute() throws MojoExecutionException, MojoFailureException {
         Log log = getLog();
         try {
             if ( serviceListFile == null || !serviceListFile.isDirectory()   ) {
                 List<String> serviceNames = getServiceListFromFile(serviceListFile);
+                try {
+                    getLog().info("Search drift class in ... " + directoryClassAbsolute.getAbsolutePath());
+                    Utility utility = new Utility(getLog());
+                    //carico le classi drift insieme a quelle del plugin
+                    utility.loadClasses(directoryClassAbsolute, URLClassLoader.class);
+                    File outputDirectory = new File(directoryClassAbsolute, "drift"); // avoid to look into possible META-INF and other no-java-class resources
+                    Set<String> classNames = utility.getClassNames(outputDirectory, directoryClassAbsolute);
+
+                    for (String className: classNames) {
+                        log.info(className);
+                    }
+                } catch (Exception e) {
+//                    throw new MojoExecutionException("Drift class not found!");
+                      e.printStackTrace();
+                }
                 generateWsdl(serviceNames);
             } else {
                 throw new IOException(ERROR_MSG_SERVICE_LIST_MISSING);
