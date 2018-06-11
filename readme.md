@@ -1,3 +1,26 @@
+ '''
+ esempio di configurazione
+    <plugin>
+            <groupId>factory.framework</groupId>
+            <artifactId>framework-thrift2Java-maven-plugin</artifactId>
+            <version>specficare versione</version>
+            <configuration>
+                <thriftExecutable>C:/Program Files (x86)/Apache/thrift/bin/thrift</thriftExecutable>
+                <thriftSourceRoot>${project.basedir}/src/main/thrift</thriftSourceRoot>
+                <outputDirectory>${project.basedir}/src/main/java/drift</outputDirectory>
+            </configuration>
+            <executions>
+                <execution>
+                    <!--<phase>non serve</phase>-->
+                    <goals>
+                        <goal>genjava</goal> <!-- genera il java dai file thrift -->
+                        <goal>Java2CxfWs</goal><!-- converte i servizi java in wsdl -->
+                    </goals>
+                </execution>
+            </executions>
+        </plugin>
+'''
+
 '''
 Plugin sequence operations:
 
@@ -130,9 +153,5 @@ http://maven.apache.org/plugin-testing/maven-plugin-testing-harness/
 
 http://thrift.apache.org/
 
-$ git remote add origin file:///share/git/project-X
--->file://cad1652/generali_dev/gitrepo
 
-# We push to the remote repository
-$ git push origin master
 

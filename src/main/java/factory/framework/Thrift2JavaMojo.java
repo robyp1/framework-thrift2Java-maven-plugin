@@ -13,9 +13,8 @@ import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.BuildPluginManager;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
-import org.apache.maven.plugins.annotations.Component;
-import org.apache.maven.plugins.annotations.Mojo;
-import org.apache.maven.plugins.annotations.Parameter;
+import org.apache.maven.plugin.logging.Log;
+import org.apache.maven.plugins.annotations.*;
 import org.apache.maven.project.MavenProject;
 
 import static org.twdata.maven.mojoexecutor.MojoExecutor.*;
@@ -27,7 +26,7 @@ import static org.twdata.maven.mojoexecutor.MojoExecutor.*;
  * @phase from process-sources to compile
  */
 
-@Mojo(name = "genjava")
+@Mojo(name = "genjava", defaultPhase = LifecyclePhase.COMPILE)
 public class Thrift2JavaMojo extends AbstractMojo {
 
 
@@ -72,6 +71,7 @@ public class Thrift2JavaMojo extends AbstractMojo {
     @Parameter(defaultValue = "C:/Program Files (x86)/Apache/thrift/bin/thrift")
     private String thriftExecutable;
 
+
     /**
      * The Maven BuildPluginManager component.
      */
@@ -81,11 +81,10 @@ public class Thrift2JavaMojo extends AbstractMojo {
 
 
     public void execute() throws MojoExecutionException, MojoFailureException {
-        getLog().info("Executing genjava " + " thriftExecutable: "  + thriftExecutable
+        Log log = getLog();
+        log.info("Executing genjava " + " thriftExecutable: "  + thriftExecutable
         + " reading thrift from dir: " + thriftSourceRoot + " write java output to dir " + outputDirectory);
         thriftPluginExecution();
-
-//      throw new MojoExecutionException("implementare execute");
     }
 
 
