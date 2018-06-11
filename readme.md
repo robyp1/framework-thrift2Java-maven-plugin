@@ -7,7 +7,6 @@
             <configuration>
                 <thriftExecutable>C:/Program Files (x86)/Apache/thrift/bin/thrift</thriftExecutable>
                 <thriftSourceRoot>${project.basedir}/src/main/thrift</thriftSourceRoot>
-                <outputDirectory>${project.basedir}/src/main/java/drift</outputDirectory>
             </configuration>
             <executions>
                 <execution>

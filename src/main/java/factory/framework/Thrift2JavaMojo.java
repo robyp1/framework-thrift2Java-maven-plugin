@@ -20,13 +20,11 @@ import org.apache.maven.project.MavenProject;
 import static org.twdata.maven.mojoexecutor.MojoExecutor.*;
 
 /**
- *
- * @goal java
- * 
- * @phase from process-sources to compile
+ * Generate java source from Thrift files , before compile phase( generate-sources maven phase)
+ * @link https://maven.apache.org/guides/introduction/introduction-to-the-lifecycle.html
  */
 
-@Mojo(name = "genjava", defaultPhase = LifecyclePhase.COMPILE)
+@Mojo(name = "genjava", defaultPhase = LifecyclePhase.GENERATE_SOURCES)
 public class Thrift2JavaMojo extends AbstractMojo {
 
 
@@ -50,7 +48,7 @@ public class Thrift2JavaMojo extends AbstractMojo {
     /**
      * where to put generated java files
      */
-    @Parameter (defaultValue = "${project.basedir}/src/main/java/drift", readonly = true)
+    @Parameter (defaultValue = "${project.basedir}/target/generated-sources/drift", readonly = true)
     private String outputDirectory;
 
 
@@ -96,7 +94,6 @@ public class Thrift2JavaMojo extends AbstractMojo {
      <version>1.0-SNAPSHOT</version>
      <configuration>
      <thriftExecutable>C:/Program Files (x86)/Apache/thrift/bin/thrift</thriftExecutable>
-     <outputDirectory>${project.basedir}/src/main/java/drift</outputDirectory>
      <thriftSourceRoot>${project.basedir}/src/main/thrift</thriftSourceRoot>
      </configuration>
      <executions>
