@@ -1,7 +1,6 @@
 package factory.framework;
 
 import org.apache.maven.execution.MavenSession;
-import org.apache.maven.model.Dependency;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.BuildPluginManager;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -14,7 +13,6 @@ import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
 
 import java.io.*;
-import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.*;
 import java.util.regex.Pattern;
@@ -28,8 +26,10 @@ import static org.twdata.maven.mojoexecutor.MojoExecutor.executionEnvironment;
  * Generate wsdl descriptor from service class after maven compile phase (phase process classes in maven build lifecycle)
  * @link https://maven.apache.org/guides/introduction/introduction-to-the-lifecycle.html
  * This is executed after compile phase (live <phase>empty in plugin execution)
- * services belongs to package: drift.<progetto>.<modulo>.api.<servizio>.nomeService.class
- * ex :
+ *
+ *  services belongs to package: drift.< progetto >.< modulo >.api.< servizio >.nomeService.class
+ *
+ * example :
  * in target/classes/generated-sources/drift there are the java thrift sources for example:
  *
  *                 drift.drift.thrift.api.shared.SharedService.java -> its the service with $Iface (inner interface Iface)
@@ -63,7 +63,7 @@ import static org.twdata.maven.mojoexecutor.MojoExecutor.executionEnvironment;
  *   Example is
  *   META-INF/wsdl/drift-thrift@SharedService.wsdl
  *   is the wsdl generated with SharedService$Iface class.
- *   Manually with command:
+ *   Manually, with command:
  *   java2ws -cp C:\Progetti\altri\Thrift\drift-thrift-api\target\classes; \
  *            -o C:\Progetti\altri\Thrift\drift-thrift-api\target/resources/META-INF/wsdl/drift-thrift@SharedService.wsdl \
  *            -wsdl \
@@ -72,12 +72,12 @@ import static org.twdata.maven.mojoexecutor.MojoExecutor.executionEnvironment;
  *
 
  */
-@Mojo(name = "Java2Ws", defaultPhase = LifecyclePhase.PROCESS_CLASSES)
+@Mojo(name = "Java2Ws", defaultPhase = LifecyclePhase.COMPILE)
 public class Java2CxfWsMojo extends AbstractMojo {
 
     public static final String ERROR_MSG_SERVICE_LIST_MISSING = "Error: services list missing! Put service list in ${project.basedir}/src/main/resources/META-INF/drift-services.list";
     public static final String $_IFACE = "$Iface";
-    //senza Service obbligatorio
+    //senza Service obbligatorio (non usata perchè supponiamo che le classi con l'interfaccia Iface annidata fniscano tutti in Service)
     public static final String CLASSNAME_SERVICE_OPTIONALLY_$_IFACE = "(\\w+\\.{1})*(\\w)+(Service)*(\\$Iface){1}";
     //con Service obbligatorio
     public static final String CLASSNAME_SERVICE_$_IFACE = "(\\w+\\.{1})*(\\w+Service\\$Iface)+";
@@ -198,8 +198,8 @@ public class Java2CxfWsMojo extends AbstractMojo {
      * @param serviceNames
      */
     private void generateWsdl(Set<String> classNames, Map<String,String> serviceNames) throws MojoExecutionException {
-       //chiamata plugin java2ws di apache cxf versione 3.2.2 (come fatto nell'altro goal Thrift2Java per chiamare il plugin thrift)
-        //la fase non viene passata perchè è la stessa del goal e credo venga passata dai parametri in executionEnvironment sotto
+        //chiamata plugin java2ws di apache cxf versione 3.1.15 (come fatto nell'altro goal Thrift2Java per chiamare il plugin thrift)
+        //la fase non viene passata perchè è la stessa del goal
         for (String className : classNames){
             int i = 0;
             Element[] elements = new Element[4];

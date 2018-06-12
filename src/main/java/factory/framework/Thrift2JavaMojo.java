@@ -2,7 +2,7 @@ package factory.framework;
 
 /**
  * Plugin thrift2Java
- * vedi readme.md
+ *
  *
  *
 
@@ -21,8 +21,10 @@ import static org.twdata.maven.mojoexecutor.MojoExecutor.*;
 
 /**
  * Generate java source from Thrift files , before compile phase( phase generate-sources in maven build lifecycle)
- * This is executed after begin of validate phase (live <phase>empty in plugin execution)
+ * This is executed after begin of validate phase (live < phase >empty in plugin execution)
  * @link https://maven.apache.org/guides/introduction/introduction-to-the-lifecycle.html
+ * Install 'thrift.exe' in C:/Program Files (x86)/Apache/thrift/bin/thrift or
+ * set thriftExecutable in configuration plugin tag.
  */
 
 @Mojo(name = "genjava", defaultPhase = LifecyclePhase.GENERATE_SOURCES)
