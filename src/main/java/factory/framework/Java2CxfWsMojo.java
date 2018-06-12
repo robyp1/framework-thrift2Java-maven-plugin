@@ -1,12 +1,16 @@
 package factory.framework;
 
+import org.apache.maven.execution.MavenSession;
 import org.apache.maven.plugin.AbstractMojo;
+import org.apache.maven.plugin.BuildPluginManager;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugin.logging.Log;
+import org.apache.maven.plugins.annotations.Component;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
+import org.apache.maven.project.MavenProject;
 
 import java.io.*;
 import java.net.URL;
@@ -14,6 +18,10 @@ import java.net.URLClassLoader;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.regex.Pattern;
+
+import static org.twdata.maven.mojoexecutor.MojoExecutor.*;
+import static org.twdata.maven.mojoexecutor.MojoExecutor.executionEnvironment;
 
 
 /**
@@ -47,6 +55,11 @@ public class Java2CxfWsMojo extends AbstractMojo {
 
     public static final String ERROR_MSG_SERVICE_LIST_MISSING = "Error: services list missing! Put service list in ${project.basedir}/src/main/resources/META-INF/drift-services.list";
     public static final String $_IFACE = "$Iface";
+    //senza Service obbligatorio
+    public static final String CLASSNAME_SERVICE_OPTIONALLY_$_IFACE = "(\\w+\\.{1})*(\\w)+(Service)*(\\$Iface){1}";
+    //con Service obbligatorio
+    public static final String CLASSNAME_SERVICE_$_IFACE = "(\\w+\\.{1})*(\\w+Service\\$Iface)+";
+    public static final Pattern SERVICE_PATTERN_CLASS = Pattern.compile(CLASSNAME_SERVICE_$_IFACE);
 
     /**
      * where is the list of services , is not set by plugin configuration
@@ -60,6 +73,20 @@ public class Java2CxfWsMojo extends AbstractMojo {
     @Parameter(defaultValue = "${project.build.directory}/classes/drift", readonly = true)
     private File directoryClassAbsolute;
 
+    @Parameter( defaultValue = "${project}", readonly = true )
+    private MavenProject mavenProject;
+
+    /**
+     * The current Maven session.
+     */
+    @Parameter( defaultValue = "${session}", readonly = true )
+    private MavenSession mavenSession;
+
+    /**
+     * The Maven BuildPluginManager component.
+     */
+    @Component
+    private BuildPluginManager pluginManager;
 
 
     public void execute() throws MojoExecutionException, MojoFailureException {
@@ -72,28 +99,70 @@ public class Java2CxfWsMojo extends AbstractMojo {
                     Utility utility = new Utility(getLog());
                     //carico le classi drift insieme a quelle del plugin
                     utility.loadClasses(directoryClassAbsolute, URLClassLoader.class);
-                    File outputDirectory = new File(directoryClassAbsolute, "drift"); // avoid to look into possible META-INF and other no-java-class resources
-                    Set<String> classNames = utility.getClassNames(outputDirectory, directoryClassAbsolute);
-
+                    File outputDirectoryDrift = new File(directoryClassAbsolute, "drift"); // avoid to look into possible META-INF and other no-java-class resources
+                    //controllo che esistono classi con sintassi nomepackage1.nomepackage2...nomepackagen.nomeclasseService$Iface
+                    Set<String> classNames = utility.getClassNames(outputDirectoryDrift, directoryClassAbsolute, SERVICE_PATTERN_CLASS.pattern());
                     for (String className: classNames) {
-                        log.info(className);
+                        log.info("Found Service class " + className);
                     }
+                    generateWsdl(classNames,serviceNames);
                 } catch (Exception e) {
-//                    throw new MojoExecutionException("Drift class not found!");
-                      e.printStackTrace();
+//                    e.printStackTrace();
+                    throw new IOException("Drift class not found! " + e.getMessage());
                 }
-                generateWsdl(serviceNames);
             } else {
                 throw new IOException(ERROR_MSG_SERVICE_LIST_MISSING);
             }
         }
         catch (IOException e) {
-              log.error(e.getMessage());   
+              log.error(e.getMessage());
+              throw new MojoExecutionException(e.getMessage(),e);
         }
     }
 
-    private void generateWsdl(List<String> serviceNames) {
-        //TODO: chiamare plugin java2ws di apache cxf versione 3.2.2 (come fatto nell'altro goal Thrift2Java per chiamre il plugin thrift)
+    /**
+     * chiamo plugin apache cxf
+     * <plugin>
+     <groupId>org.apache.cxf</groupId>
+     <artifactId>cxf-java2ws-plugin</artifactId>
+     <version>3.2.2</version>
+     <dependencies>
+     <dependency>
+     <groupId>org.apache.cxf</groupId>
+     <artifactId>cxf-rt-frontend-jaxws</artifactId>
+     <version>3.2.2</version>
+     </dependency>
+     <dependency>
+     <groupId>org.apache.cxf</groupId>
+     <artifactId>cxf-rt-frontend-simple</artifactId>
+     <version>3.2.2</version>
+     </dependency>
+     </dependencies>
+     </plugin>
+     * @param classNames
+     * @param serviceNames
+     */
+    private void generateWsdl(Set<String> classNames, List<String> serviceNames) {
+       //TODO: chiamare plugin java2ws di apache cxf versione 3.2.2 (come fatto nell'altro goal Thrift2Java per chiamre il plugin thrift)
+//        executeMojo(
+//                plugin(
+//                        groupId(""),
+//                        artifactId(""),
+//                        version("")
+//                ),
+//                goal("compile"),
+//                configuration(
+//                        element("thriftExecutable", ),
+//                        element("thriftSourceRoot", ),
+//                        element("outputDirectory", )
+//                ),
+//                executionEnvironment(
+//                        mavenProject,
+//                        mavenSession,
+//                        pluginManager
+//                )
+//        );
+
     }
 
     private List<String> getServiceListFromFile(File serviceListFile) throws IOException {

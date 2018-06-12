@@ -13,6 +13,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.regex.Matcher;
 
 public class Utility {
 
@@ -57,25 +58,38 @@ public class Utility {
 
 
     /**
-     * Resolves tha java name (package.className) for each .class present in the directory.
-     *
-     * @param directory
+     * Resolves tha java name (package.className) for each .class present in the directory
+     * against a matcher pattern (optionally)
+     * recursive method
+     * @param directory  directory where is possible to find classes- required
+     * @param _outputDirectory target classes directory (root of searching) where start to find  classes- required
+     * @param regexFilter filtering class name against a patter - optionally
      * @return
      */
-    public Set<String> getClassNames(File directory, File _outputDirectory) {
+    public Set<String> getClassNames(File directory, File _outputDirectory, String regexFilter) {
         Set<String> res = new HashSet();
         File[] files = directory.listFiles();
+//        log.info(directory.getPath());
         if (files != null) {
             for (File file: files) {
                 if (file.isDirectory()) {
-                    res.addAll(getClassNames(file, _outputDirectory));
+                    res.addAll(getClassNames(file, _outputDirectory, regexFilter));
+                    log.info(String.format("looking into dir: %s", file.getAbsolutePath()));
                 } else {
                     String absolutePath = file.getAbsolutePath();
                     String className = absolutePath.replace(_outputDirectory.getAbsolutePath(), ""); // remove ../target/classes prefix
                     className = className
                             .substring(1, className.length() - CLASS_EXT.length()) // remove leading "\" and ending ".class"
                             .replace("\\", ".");
-                    res.add(className);
+                    log.debug(String.format("found class name: %s", className));
+                    //bug!? il doppio dollaro manda in blocco il check!! allora escludo dal check stringhe con piu di un dollaro
+                    if (className.indexOf("\\$") == className.lastIndexOf("\\$")) {
+                        log.debug("**" + className + " match - > " + String.valueOf(className.matches(regexFilter)));
+                        if (className.matches(regexFilter) || regexFilter == null || regexFilter.trim().equals("")) {
+                            res.add(className);
+                            log.debug(String.format("found class name service %s", className));
+                        }
+                    }
                 }
             }
         }
