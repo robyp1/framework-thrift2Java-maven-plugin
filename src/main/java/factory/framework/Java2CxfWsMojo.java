@@ -25,21 +25,14 @@ import static org.twdata.maven.mojoexecutor.MojoExecutor.executionEnvironment;
 
 /**
  *
- * Generate wsdl descriptor from service class after maven compile phase (process classes pahse)
+ * Generate wsdl descriptor from service class after maven compile phase (phase process classes in maven build lifecycle)
  * @link https://maven.apache.org/guides/introduction/introduction-to-the-lifecycle.html
- * This is done after compile phase
+ * This is executed after compile phase (live <phase>empty in plugin execution)
  * services belongs to package: drift.<progetto>.<modulo>.api.<servizio>.nomeService.class
  * ex :
- * in generated-sources/drift there are the java sources and then:
- *                 drift.drift.thrift.api.shared.SharedService.java -> its the service with $Iface (inner interface Iface)
+ * in target/classes/generated-sources/drift there are the java thrift sources for example:
  *
- * so the command line is (-cp is not required when you are in the classpath):
- *    "C:\Program Files (x86)\Apache\cxf\apache-cxf-3.2.2\bin\java2ws" \
- *    -cp "./target/drift-thrift-api-1.0.1-SNAPSHOT.jar;C:\Progetti\.m2\repository\org\apache\thrift\libthrift\0.11.0\libthrift-0.11.0.jar" \
- *    -verbose \
- *    -wsdl \
- *    -o Shared.wsdl \
- *    drift.drift.thrift.api.shared.SharedService$Iface
+ *                 drift.drift.thrift.api.shared.SharedService.java -> its the service with $Iface (inner interface Iface)
  *
  * The services list with wsdl names must be in META-INF/druft-service.list
  *
@@ -54,6 +47,29 @@ import static org.twdata.maven.mojoexecutor.MojoExecutor.executionEnvironment;
  * public class SharedService {
  *
  *   public interface Iface {
+ *   ..
+ *   }
+ *  ..
+ *  }
+ *
+ *   NOTES:
+ *
+ *   CXF_VERSION_JDK7_BYTECODE ->3.1.15, that is the last versione of Apache CXF compiled for jdk 1.7 (but it works also with 1.8)
+ *
+ *   CLASSNAME_SERVICE_$_IFACE is the string packages.<name></>Service$Iface
+ *   where <name> is the service name
+ *
+ *   You have to  map service <name>Service with @<name>Service</name>.wsdl in  ${project.basedir}/sources/META-INF/drift-service.list
+ *   Example is
+ *   META-INF/wsdl/drift-thrift@SharedService.wsdl
+ *   is the wsdl generated with SharedService$Iface class.
+ *   Manually with command:
+ *   java2ws -cp C:\Progetti\altri\Thrift\drift-thrift-api\target\classes; \
+ *            -o C:\Progetti\altri\Thrift\drift-thrift-api\target/resources/META-INF/wsdl/drift-thrift@SharedService.wsdl \
+ *            -wsdl \
+ *            -verbose \
+ *            drift.drift.thrift.api.shared.SharedService$Iface
+ *
 
  */
 @Mojo(name = "Java2Ws", defaultPhase = LifecyclePhase.PROCESS_CLASSES)
@@ -66,6 +82,9 @@ public class Java2CxfWsMojo extends AbstractMojo {
     //con Service obbligatorio
     public static final String CLASSNAME_SERVICE_$_IFACE = "(\\w+\\.{1})*(\\w+Service\\$Iface)+";
     public static final Pattern SERVICE_PATTERN_CLASS = Pattern.compile(CLASSNAME_SERVICE_$_IFACE);
+    public static final String CXF_VERSION_JDK7_BYTECODE = "3.1.15";//last version compiled with jdk 1.7
+    public static final String DRIFT_PARENT_DIR = "drift";
+    public static final String LIBTHRIF_VERSION = "0.11.0";
 
     /**
      * where is the list of services , is not set by plugin configuration
@@ -116,15 +135,15 @@ public class Java2CxfWsMojo extends AbstractMojo {
                     Utility utility = new Utility(getLog());
                     //carico le classi drift insieme a quelle del plugin
                     utility.loadClasses(directoryClassAbsolute, URLClassLoader.class);
-                    File outputDirectoryDrift = new File(directoryClassAbsolute, "drift"); // avoid to look into possible META-INF and other no-java-class resources
+                    File outputDirectoryDrift = new File(directoryClassAbsolute, DRIFT_PARENT_DIR); // avoid to look into other no-java-class resources
                     //controllo che esistono classi con sintassi nomepackage1.nomepackage2...nomepackagen.nomeclasseService$Iface
-                    Set<String> classNames = utility.getClassNames(outputDirectoryDrift, directoryClassAbsolute, SERVICE_PATTERN_CLASS.pattern());
+                    Set<String> classNames = utility.getClassNames(outputDirectoryDrift, directoryClassAbsolute, SERVICE_PATTERN_CLASS.pattern(), DRIFT_PARENT_DIR);
                     for (String className: classNames) {
                         log.info("Found Service class " + className);
                     }
                     generateWsdl(classNames,serviceNames);
                 } catch (Exception e) {
-//                    e.printStackTrace();
+                    e.printStackTrace();
                     throw new IOException("Drift class not found! " + e.getMessage());
                 }
             } else {
@@ -181,24 +200,27 @@ public class Java2CxfWsMojo extends AbstractMojo {
     private void generateWsdl(Set<String> classNames, Map<String,String> serviceNames) throws MojoExecutionException {
        //chiamata plugin java2ws di apache cxf versione 3.2.2 (come fatto nell'altro goal Thrift2Java per chiamare il plugin thrift)
         //la fase non viene passata perchè è la stessa del goal e credo venga passata dai parametri in executionEnvironment sotto
-        String cxfVersion = "3.2.2";
         for (String className : classNames){
             int i = 0;
             Element[] elements = new Element[4];
             elements[i++] = new Element("className", className);
             elements[i++] = new Element("genWsdl",  Boolean.TRUE.toString());
             elements[i++] = new Element("verbose",  Boolean.TRUE.toString());
-            String wsdlOutputFile = serviceNames.get(className);
+            String[] splitpackages = className.trim().split("\\.");
+            String classNameInner = splitpackages[splitpackages.length-1];
+            String classServiceName = classNameInner.substring(0, (classNameInner.indexOf("Iface")-1));
+            String wsdlOutputFile = serviceNames.get(classServiceName);
+            getLog().info("passing class interface "+classServiceName + ", output to " + wsdlOutputFile );
             elements[i++] = new Element("outputFile",  projectDir + "/resources/" + wsdlOutputFile);
-//            elements[i++] = new Element("outputFile",  wsdlService); //usare una mappa
             executeMojo(
                     plugin(
                             groupId("org.apache.cxf"),
                             artifactId("cxf-java2ws-plugin"),
-                            version(cxfVersion),
+                            version(CXF_VERSION_JDK7_BYTECODE),
                             dependencies(
-                                    dependency("org.apache.cxf", "cxf-rt-frontend-jaxws"  , cxfVersion),
-                                    dependency("org.apache.cxf", "cxf-rt-frontend-simple"  , cxfVersion)
+                                    dependency("org.apache.cxf", "cxf-rt-frontend-jaxws"  , CXF_VERSION_JDK7_BYTECODE),
+                                    dependency("org.apache.cxf", "cxf-rt-frontend-simple"  , CXF_VERSION_JDK7_BYTECODE),
+                                    dependency("org.apache.thrift","libthrift", LIBTHRIF_VERSION)
                             )
                     ),
                     goal("java2ws"),
@@ -217,7 +239,7 @@ public class Java2CxfWsMojo extends AbstractMojo {
     }
 
     private Map<String,String> getServiceListFromFile(File serviceListFile) throws IOException {
-        Map<String,String> services = new LinkedHashMap<String, String>();
+        Map<String,String> services = new HashMap<>();
         if (serviceListFile.exists()){
             FileReader fileInputStream = new FileReader(serviceListFile);
             BufferedReader bf = new BufferedReader(fileInputStream);
@@ -225,7 +247,7 @@ public class Java2CxfWsMojo extends AbstractMojo {
                 String line = bf.readLine();
                 while (line != null){
                     String servicePathFileName = line.trim();
-                    // MEMETA-INF/wsdl/drift-thrift@SharedService.wsdl ->  SharedService
+                    // META-INF/wsdl/drift-thrift@SharedService.wsdl ->  SharedService
                     String serviceName = servicePathFileName.substring(servicePathFileName.lastIndexOf("@")+1,servicePathFileName.lastIndexOf(".wsdl") );
                     services.put(serviceName, servicePathFileName);
                     getLog().info(serviceName + " -> " + servicePathFileName);

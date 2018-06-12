@@ -20,7 +20,8 @@ import org.apache.maven.project.MavenProject;
 import static org.twdata.maven.mojoexecutor.MojoExecutor.*;
 
 /**
- * Generate java source from Thrift files , before compile phase( generate-sources maven phase)
+ * Generate java source from Thrift files , before compile phase( phase generate-sources in maven build lifecycle)
+ * This is executed after begin of validate phase (live <phase>empty in plugin execution)
  * @link https://maven.apache.org/guides/introduction/introduction-to-the-lifecycle.html
  */
 
