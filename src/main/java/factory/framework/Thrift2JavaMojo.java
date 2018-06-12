@@ -25,6 +25,9 @@ import static org.twdata.maven.mojoexecutor.MojoExecutor.*;
  * @link https://maven.apache.org/guides/introduction/introduction-to-the-lifecycle.html
  * Install 'thrift.exe' in C:/Program Files (x86)/Apache/thrift/bin/thrift or
  * set thriftExecutable in configuration plugin tag.
+ *
+ * The default output java dir is "${project.basedir}/target/generated-sources/drift
+ * (dove ci sono i sorgenti java generati dal thrift plugin)
  */
 
 @Mojo(name = "genjava", defaultPhase = LifecyclePhase.GENERATE_SOURCES)

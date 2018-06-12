@@ -15,6 +15,9 @@ import java.util.List;
 import java.util.Set;
 import java.util.regex.Matcher;
 
+/**
+ * Tools for reflection and others utilities..
+ */
 public class Utility {
 
     private static final String CLASS_EXT = ".class";
@@ -24,6 +27,11 @@ public class Utility {
         this.log= log;
     }
 
+    /**
+     * call loadClasses methods and list all classes in this classloader
+     * @param driftClassAbsolutePath
+     * @throws Exception
+     */
     public void getListClass(File driftClassAbsolutePath) throws Exception {
         Class<URLClassLoader> urlClass = URLClassLoader.class;
         ClassLoader urlClassLoader = null;
@@ -43,7 +51,16 @@ public class Utility {
     }
 
 
-
+    /**
+     * load target drift (thrift) classes in this classloader
+     * @param driftClassAbsolutePath
+     * @param urlClass
+     * @return
+     * @throws NoSuchMethodException
+     * @throws MalformedURLException
+     * @throws InvocationTargetException
+     * @throws IllegalAccessException
+     */
     public ClassLoader loadClasses( File driftClassAbsolutePath, Class<URLClassLoader> urlClass ) throws NoSuchMethodException, MalformedURLException, InvocationTargetException, IllegalAccessException //throws NoSuchMethodException, MalformedURLException, InvocationTargetException, IllegalAccessException
      {
         ClassLoader classLoader = this.getClass().getClassLoader();

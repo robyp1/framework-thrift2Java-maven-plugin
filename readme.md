@@ -1,16 +1,17 @@
+
  '''
  esempio di configurazione
     <plugin>
             <groupId>factory.framework</groupId>
             <artifactId>framework-thrift2Java-maven-plugin</artifactId>
-            <version>specficare versione</version>
+            <version>2.5.0-SNAPSHOT</version>
             <configuration>
                 <thriftExecutable>C:/Program Files (x86)/Apache/thrift/bin/thrift</thriftExecutable>
                 <thriftSourceRoot>${project.basedir}/src/main/thrift</thriftSourceRoot>
             </configuration>
             <executions>
                 <execution>
-                    <!--<phase>non serve</phase>-->
+                    <!--<phase>non serve, tutti goal vengono già eseguiti in compile phase</phase>-->
                     <goals>
                         <goal>genjava</goal> <!-- genera il java dai file thrift -->
                         <goal>Java2CxfWs</goal><!-- converte i servizi java in wsdl -->
@@ -19,6 +20,9 @@
             </executions>
         </plugin>
 '''
+
+*** DA AGGIORNARE***
+
 
 '''
 Plugin sequence operations:
