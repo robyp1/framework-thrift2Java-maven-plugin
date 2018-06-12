@@ -1,6 +1,7 @@
 package factory.framework;
 
 import org.apache.maven.execution.MavenSession;
+import org.apache.maven.model.Dependency;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.BuildPluginManager;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -15,9 +16,7 @@ import org.apache.maven.project.MavenProject;
 import java.io.*;
 import java.net.URL;
 import java.net.URLClassLoader;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.regex.Pattern;
 
 import static org.twdata.maven.mojoexecutor.MojoExecutor.*;
@@ -43,6 +42,13 @@ import static org.twdata.maven.mojoexecutor.MojoExecutor.executionEnvironment;
  *    drift.drift.thrift.api.shared.SharedService$Iface
  *
  * The services list with wsdl names must be in META-INF/druft-service.list
+ *
+ * NB:
+ * Per collagare il path al wsdl presente nel drift-service.list
+ * il nome del wsdl deve essere pari al nome della classe che precede $Iface
+ * es:
+ * META-INF/wsdl/drift-thrift@SharedService.wsdl -> SharedService$Iface
+ * (SharedService sarà la class name e SharedService.wsdl il nome del wsdl che va nel file di lista)
  *
  * Class with inner interface Iface
  * public class SharedService {
@@ -70,11 +76,22 @@ public class Java2CxfWsMojo extends AbstractMojo {
     @Parameter(defaultValue = "/drift", readonly = true)
     private String driftClass;
 
+    /**
+     * where drift class file compiled
+     * this is not in plugin configuration tag
+     */
     @Parameter(defaultValue = "${project.build.directory}/classes/drift", readonly = true)
     private File directoryClassAbsolute;
 
     @Parameter( defaultValue = "${project}", readonly = true )
     private MavenProject mavenProject;
+
+
+    /**
+     * Project dir, this is not for plugin configuration tag
+     */
+    @Parameter( defaultValue ="${project.build.directory}",readonly = true )
+    String projectDir;
 
     /**
      * The current Maven session.
@@ -93,7 +110,7 @@ public class Java2CxfWsMojo extends AbstractMojo {
         Log log = getLog();
         try {
             if ( serviceListFile == null || !serviceListFile.isDirectory()   ) {
-                List<String> serviceNames = getServiceListFromFile(serviceListFile);
+                Map<String, String> serviceNames = getServiceListFromFile(serviceListFile);
                 try {
                     getLog().info("Search drift class in ... " + directoryClassAbsolute.getAbsolutePath());
                     Utility utility = new Utility(getLog());
@@ -122,60 +139,96 @@ public class Java2CxfWsMojo extends AbstractMojo {
 
     /**
      * chiamo plugin apache cxf
+     * Per collagare il path al wsdl presente nel drift-service.list
+     * il nome del wsdl deve essere pari al nome della classe che precede $Iface
+     * es:
+     * META-INF/wsdl/drift-thrift@SharedService.wsdl -> SharedService$Iface
+     * (SharedService sarà la class name e SharedService.wsdl il nome del wsdl)
      * <plugin>
      <groupId>org.apache.cxf</groupId>
      <artifactId>cxf-java2ws-plugin</artifactId>
-     <version>3.2.2</version>
+     <version>${cxf.version}</version>
      <dependencies>
      <dependency>
      <groupId>org.apache.cxf</groupId>
      <artifactId>cxf-rt-frontend-jaxws</artifactId>
-     <version>3.2.2</version>
+     <version>${cxf.version}</version>
      </dependency>
      <dependency>
      <groupId>org.apache.cxf</groupId>
      <artifactId>cxf-rt-frontend-simple</artifactId>
-     <version>3.2.2</version>
+     <version>${cxf.version}</version>
      </dependency>
      </dependencies>
+     <executions>
+     <execution>
+     <id>process-classes</id>
+     <phase>process-classes</phase>
+     <configuration>
+     <className>org.apache.hello_world.Greeter</className>
+     <genWsdl>true</genWsdl>
+     <verbose>true</verbose>
+     </configuration>
+     <goals>
+     <goal>java2ws</goal>
+     </goals>
+     </execution>
+     </executions>
      </plugin>
      * @param classNames
      * @param serviceNames
      */
-    private void generateWsdl(Set<String> classNames, List<String> serviceNames) {
-       //TODO: chiamare plugin java2ws di apache cxf versione 3.2.2 (come fatto nell'altro goal Thrift2Java per chiamre il plugin thrift)
-//        executeMojo(
-//                plugin(
-//                        groupId(""),
-//                        artifactId(""),
-//                        version("")
-//                ),
-//                goal("compile"),
-//                configuration(
-//                        element("thriftExecutable", ),
-//                        element("thriftSourceRoot", ),
-//                        element("outputDirectory", )
-//                ),
-//                executionEnvironment(
-//                        mavenProject,
-//                        mavenSession,
-//                        pluginManager
-//                )
-//        );
+    private void generateWsdl(Set<String> classNames, Map<String,String> serviceNames) throws MojoExecutionException {
+       //chiamata plugin java2ws di apache cxf versione 3.2.2 (come fatto nell'altro goal Thrift2Java per chiamare il plugin thrift)
+        //la fase non viene passata perchè è la stessa del goal e credo venga passata dai parametri in executionEnvironment sotto
+        String cxfVersion = "3.2.2";
+        for (String className : classNames){
+            int i = 0;
+            Element[] elements = new Element[4];
+            elements[i++] = new Element("className", className);
+            elements[i++] = new Element("genWsdl",  Boolean.TRUE.toString());
+            elements[i++] = new Element("verbose",  Boolean.TRUE.toString());
+            String wsdlOutputFile = serviceNames.get(className);
+            elements[i++] = new Element("outputFile",  projectDir + "/resources/" + wsdlOutputFile);
+//            elements[i++] = new Element("outputFile",  wsdlService); //usare una mappa
+            executeMojo(
+                    plugin(
+                            groupId("org.apache.cxf"),
+                            artifactId("cxf-java2ws-plugin"),
+                            version(cxfVersion),
+                            dependencies(
+                                    dependency("org.apache.cxf", "cxf-rt-frontend-jaxws"  , cxfVersion),
+                                    dependency("org.apache.cxf", "cxf-rt-frontend-simple"  , cxfVersion)
+                            )
+                    ),
+                    goal("java2ws"),
+                    configuration(
+                            elements
+                    ),
+                    executionEnvironment(
+                            mavenProject,
+                            mavenSession,
+                            pluginManager
+                    )
+            );
+        }
+
 
     }
 
-    private List<String> getServiceListFromFile(File serviceListFile) throws IOException {
-        List<String> services = new ArrayList<String>();
+    private Map<String,String> getServiceListFromFile(File serviceListFile) throws IOException {
+        Map<String,String> services = new LinkedHashMap<String, String>();
         if (serviceListFile.exists()){
             FileReader fileInputStream = new FileReader(serviceListFile);
             BufferedReader bf = new BufferedReader(fileInputStream);
             try {
                 String line = bf.readLine();
                 while (line != null){
-                    String serviceName = line.trim();
-                    services.add(serviceName);
-                    getLog().info(serviceName);
+                    String servicePathFileName = line.trim();
+                    // MEMETA-INF/wsdl/drift-thrift@SharedService.wsdl ->  SharedService
+                    String serviceName = servicePathFileName.substring(servicePathFileName.lastIndexOf("@")+1,servicePathFileName.lastIndexOf(".wsdl") );
+                    services.put(serviceName, servicePathFileName);
+                    getLog().info(serviceName + " -> " + servicePathFileName);
                     line = bf.readLine();
                 }
             } catch (IOException e) {
