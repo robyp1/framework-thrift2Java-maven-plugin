@@ -75,6 +75,8 @@ public class Utility {
 
 
     /**
+     * use:
+     * @see factory.framework.DriftFileVisitor
      * Resolves tha java name (package.className) for each .class present in the directory
      * against a matcher pattern (optionally)
      * recursive method
@@ -84,6 +86,7 @@ public class Utility {
      * @param  externalPackageName the parent package in root project classes, 'drift' wich containts subpackages drift.x.y...className.class
      * @return
      */
+    @Deprecated
     public Set<String> getClassNames(File directory, File _outputDirectory, String regexFilter, String externalPackageName) {
         Set<String> res = new HashSet();
         File[] files = directory.listFiles();

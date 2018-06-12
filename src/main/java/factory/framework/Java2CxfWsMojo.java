@@ -14,6 +14,9 @@ import org.apache.maven.project.MavenProject;
 
 import java.io.*;
 import java.net.URLClassLoader;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.regex.Pattern;
 
@@ -99,7 +102,7 @@ public class Java2CxfWsMojo extends AbstractMojo {
      * where drift class file compiled
      * this is not in plugin configuration tag
      */
-    @Parameter(defaultValue = "${project.build.directory}/classes/drift", readonly = true)
+    @Parameter(defaultValue = "${project.build.directory}/classes", readonly = true)
     private File directoryClassAbsolute;
 
     @Parameter( defaultValue = "${project}", readonly = true )
@@ -137,7 +140,11 @@ public class Java2CxfWsMojo extends AbstractMojo {
                     utility.loadClasses(directoryClassAbsolute, URLClassLoader.class);
                     File outputDirectoryDrift = new File(directoryClassAbsolute, DRIFT_PARENT_DIR); // avoid to look into other no-java-class resources
                     //controllo che esistono classi con sintassi nomepackage1.nomepackage2...nomepackagen.nomeclasseService$Iface
-                    Set<String> classNames = utility.getClassNames(outputDirectoryDrift, directoryClassAbsolute, SERVICE_PATTERN_CLASS.pattern(), DRIFT_PARENT_DIR);
+//                    Set<String> classNames = utility.getClassNames(outputDirectoryDrift, directoryClassAbsolute, SERVICE_PATTERN_CLASS.pattern(), DRIFT_PARENT_DIR);
+                    Set<String> classNames =new HashSet<>();
+                    Path pathToClassesAbs = Paths.get(outputDirectoryDrift.toURI());
+                    DriftFileVisitor driftFileVisitor = new DriftFileVisitor(pathToClassesAbs, SERVICE_PATTERN_CLASS.pattern(), log, classNames);
+                    Files.walkFileTree(pathToClassesAbs, driftFileVisitor);
                     for (String className: classNames) {
                         log.info("Found Service class " + className);
                     }
@@ -210,7 +217,7 @@ public class Java2CxfWsMojo extends AbstractMojo {
             String classNameInner = splitpackages[splitpackages.length-1];
             String classServiceName = classNameInner.substring(0, (classNameInner.indexOf("Iface")-1));
             String wsdlOutputFile = serviceNames.get(classServiceName);
-            getLog().info("passing class interface "+classServiceName + ", output to " + wsdlOutputFile );
+            getLog().info("take class interface "+classServiceName + ", will output to " + wsdlOutputFile );
             elements[i++] = new Element("outputFile",  projectDir + "/resources/" + wsdlOutputFile);
             executeMojo(
                     plugin(
@@ -250,7 +257,7 @@ public class Java2CxfWsMojo extends AbstractMojo {
                     // META-INF/wsdl/drift-thrift@SharedService.wsdl ->  SharedService
                     String serviceName = servicePathFileName.substring(servicePathFileName.lastIndexOf("@")+1,servicePathFileName.lastIndexOf(".wsdl") );
                     services.put(serviceName, servicePathFileName);
-                    getLog().info(serviceName + " -> " + servicePathFileName);
+                    getLog().debug(serviceName + " -> " + servicePathFileName);
                     line = bf.readLine();
                 }
             } catch (IOException e) {
