@@ -158,3 +158,42 @@ http://thrift.apache.org/
 
 
 
+Ultimo erore:
+Caused by: com.sun.xml.bind.v2.runtime.IllegalAnnotationsException: 2 counts of IllegalAnnotationExceptions
+Class has two properties of the same name "key"
+	this problem is related to the following location:
+		at public int drift.drift.thrift.api.shared.SharedStruct.getKey()
+		at drift.drift.thrift.api.shared.SharedStruct
+	this problem is related to the following location:
+		at public int drift.drift.thrift.api.shared.SharedStruct.key
+		at drift.drift.thrift.api.shared.SharedStruct
+Class has two properties of the same name "value"
+	this problem is related to the following location:
+		at public java.lang.String drift.drift.thrift.api.shared.SharedStruct.getValue()
+		at drift.drift.thrift.api.shared.SharedStruct
+	this problem is related to the following location:
+		at public java.lang.String drift.drift.thrift.api.shared.SharedStruct.value
+		at drift.drift.thrift.api.shared.SharedStruct
+
+	at com.sun.xml.bind.v2.runtime.IllegalAnnotationsException$Builder.check(IllegalAnnotationsException.java:106)
+	at com.sun.xml.bind.v2.runtime.JAXBContextImpl.getTypeInfoSet(JAXBContextImpl.java:460)
+	at com.sun.xml.bind.v2.runtime.JAXBContextImpl.<init>(JAXBContextImpl.java:292)
+	at com.sun.xml.bind.v2.runtime.JAXBContextImpl.<init>(JAXBContextImpl.java:139)
+	at com.sun.xml.bind.v2.runtime.JAXBContextImpl$JAXBContextBuilder.build(JAXBContextImpl.java:1138)
+	at com.sun.xml.bind.v2.ContextFactory.createContext(ContextFactory.java:162)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:497)
+	at javax.xml.bind.ContextFinder.newInstance(ContextFinder.java:247)
+	at javax.xml.bind.ContextFinder.newInstance(ContextFinder.java:234)
+	at javax.xml.bind.ContextFinder.find(ContextFinder.java:441)
+	at javax.xml.bind.JAXBContext.newInstance(JAXBContext.java:641)
+	at org.apache.cxf.common.jaxb.JAXBContextCache$2.run(JAXBContextCache.java:347)
+	at org.apache.cxf.common.jaxb.JAXBContextCache$2.run(JAXBContextCache.java:345)
+	at java.security.AccessController.doPrivileged(Native Method)
+	at org.apache.cxf.common.jaxb.JAXBContextCache.createContext(JAXBContextCache.java:345)
+	at org.apache.cxf.common.jaxb.JAXBContextCache.getCachedContextAndSchemas(JAXBContextCache.java:246)
+	at org.apache.cxf.jaxb.JAXBDataBinding.createJAXBContextAndSchemas(JAXBDataBinding.java:474)
+	at org.apache.cxf.jaxb.JAXBDataBinding.initialize(JAXBDataBinding.java:329)
+	... 40 more

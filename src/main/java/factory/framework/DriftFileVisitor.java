@@ -65,7 +65,7 @@ public class DriftFileVisitor implements FileVisitor<Path> {
             className = className
                     .substring(1, className.length() - CLASS_EXT.length()) // remove leading "\" and ending ".class"
                     ;
-            _outputClasses.add( className); //append prefix 'drift' at begining
+            _outputClasses.add( "drift." + className); //append prefix 'drift' at begining
             _log.debug(String.format("check class name: %s", className));
             //bug!? il doppio dollaro manda in blocco il check!! allora escludo dal check stringhe con piu di un dollaro
             if (className.indexOf(DOLLAR_INNER_CLASS) == className.lastIndexOf(DOLLAR_INNER_CLASS)) {
