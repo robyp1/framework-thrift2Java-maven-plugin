@@ -65,10 +65,10 @@ public class DriftFileVisitor implements FileVisitor<Path> {
             _log.debug("take classes dir [" + outputclasses + "] and remove target class [" + _outputDirectory + "]");
             String className = outputclasses.replace(_outputDirectory.toFile().getAbsolutePath(), ""); // remove ../target/classes prefix
             className = className.replace("\\", "."); //substitute . insteaf of /
-            _outputClasses.add( _packagePrefix + className); //append prefix 'drift' at begining
             className = className
                     .substring(1, className.length() - CLASS_EXT.length()) // remove leading "\" and ending ".class"
                     ;
+            _outputClasses.add( _packagePrefix + className); //append prefix 'drift' at begining
             _log.debug(String.format("check class name: %s", className));
             //bug!? il doppio dollaro manda in blocco il check!! allora escludo dal check stringhe con piu di un dollaro
             if (className.indexOf(DOLLAR_INNER_CLASS) == className.lastIndexOf(DOLLAR_INNER_CLASS)) {

@@ -16,9 +16,9 @@ import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
 
 import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 import java.io.*;
-import java.net.URLClassLoader;
 import java.nio.file.*;
 import java.util.*;
 import java.util.regex.Pattern;
@@ -129,13 +129,6 @@ public class Java2CxfWsMojo extends AbstractMojo {
     @Component
     private BuildPluginManager pluginManager;
 
-//    @Parameter(property = "project.build.outputDirectory", required = true)
-//    private String classpath;
-//
-//    @Parameter(property = "project.compileClasspathElements", required = true)
-//    private List<?> classpathElements;
-
-
 
     public void execute() throws MojoExecutionException, MojoFailureException {
         Log log = getLog();
@@ -145,17 +138,17 @@ public class Java2CxfWsMojo extends AbstractMojo {
                 Map<String, String> serviceNames = getServiceListFromFile(serviceListFile);
                 try {
                     getLog().info("Search drift class in ... " + directoryClassAbsolute.getAbsolutePath());
-                    //carico le classi drift insieme a quelle del plugin
-                    ClassLoader classLoader = utility.loadClasses(directoryClassAbsolute, URLClassLoader.class);
+//                    utility.getAllListClass(directoryClassAbsolute);
+                    utility.loadClasses(directoryClassAbsolute);
+                    getLog().debug("After Load drift classes:");
                     utility.getAllListClass(directoryClassAbsolute);
                     File outputDirectoryDrift = new File(directoryClassAbsolute, DRIFT_PARENT_DIR); // avoid to look into other no-java-class resources
                     //controllo che esistono classi con sintassi nomepackage1.nomepackage2...nomepackagen.nomeclasseService$Iface
-//                    Set<String> interfaceClassNames = utility.getClassNames(outputDirectoryDrift, directoryClassAbsolute, SERVICE_PATTERN_CLASS.pattern(), DRIFT_PARENT_DIR);
                     Set<String> interfaceClassNames = new HashSet<>();
                     Path pathToClassesAbs = Paths.get(outputDirectoryDrift.toURI());
                     Set<String> outputclasses = new HashSet<>();
                     DriftFileVisitor driftFileVisitor
-                            = new DriftFileVisitor(pathToClassesAbs, SERVICE_PATTERN_CLASS.pattern(), log, interfaceClassNames, outputclasses,"drift");
+                            = new DriftFileVisitor(pathToClassesAbs, SERVICE_PATTERN_CLASS.pattern(), log, interfaceClassNames, outputclasses,"drift.");
                     try {
                         Files.walkFileTree(pathToClassesAbs, driftFileVisitor);
                     } catch (IOException e1)
@@ -165,8 +158,9 @@ public class Java2CxfWsMojo extends AbstractMojo {
                     }
                     try {
                         for (String className : outputclasses){
-                                Class clazz = classLoader.loadClass(className); //le classi prima di essere redefinite da buddy devono essere caricare nel class loader
-                                addMissingAnnotation(clazz, pathToClassesAbs);
+//                          //le classi prima di essere redefinite da buddy devono essere caricare nel class loader
+                            Class clazz = Class.forName(className);
+                            addMissingAnnotation(clazz, pathToClassesAbs);
                         }
                         //genero i wsdl
                         generateWsdl(interfaceClassNames,serviceNames);
@@ -190,16 +184,16 @@ public class Java2CxfWsMojo extends AbstractMojo {
     }
 
     /**
-     * adding XmlElement(XlmAccessType.FIELD) for class className and save (overwrite) class to disk
+     * adding @XmlAccessorType(XlmAccessType.FIELD) for class className and save (overwrite) class to disk
      * @param className name of class loaded in this ClassLoader
      */
     private void addMissingAnnotation(Class className, Path _outputDirectory) {
-        //addinbg annotation @XmlElement(XlmAccessType.FIELD) to class type
+        //addinbg annotation @XmlAccessorType(XmlAccessorType.FIELD) to class type
         try {
             getLog().debug("class " + className.getCanonicalName() + "loaded, redefine it, adding missing annotations");
             new ByteBuddy(ClassFileVersion.JAVA_V7)
                     .redefine(className)
-                    .annotateType(AnnotationDescription.Builder.ofType(XmlElement.class).define("value", XmlAccessType.FIELD).build())
+                    .annotateType(AnnotationDescription.Builder.ofType(XmlAccessorType.class).define("value", XmlAccessType.FIELD).build())
                     .make()
                     .saveIn(_outputDirectory.toFile()); //salvo la classe modificata sovrascrivendo quella compilata
         } catch (IOException e) {
@@ -322,6 +316,12 @@ public class Java2CxfWsMojo extends AbstractMojo {
 
     }
 
+
+//    @Parameter(property = "project.build.outputDirectory", required = true)
+//    private String classpath;
+//
+//    @Parameter(property = "project.compileClasspathElements", required = true)
+//    private List<?> classpathElements;
 
 //    private String getPathElement(String classpath) {
 //        String res = classpath;
