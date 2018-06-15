@@ -25,7 +25,6 @@ public class DriftFileVisitor implements FileVisitor<Path> {
     private final Log _log;
     private final Set<String> _res;
     private final Set<String> _outputClasses;
-    private final String _packagePrefix;
 
     /**
      *
@@ -34,15 +33,13 @@ public class DriftFileVisitor implements FileVisitor<Path> {
      * @param log
      * @param interfaceClasss Set of Drift Service classes ending with $Iface
      * @param outputClasses Set of classes correspond ti outClassesUrl
-     * @param packagePrefix is the "drift" package root
      */
-    public DriftFileVisitor(Path outputDirectory, String regexFilter, Log log, Set<String> interfaceClasss, Set<String> outputClasses, String packagePrefix) {
+    public DriftFileVisitor(Path outputDirectory, String regexFilter, Log log, Set<String> interfaceClasss, Set<String> outputClasses) {
         _outputDirectory = outputDirectory;
         _regexFilter = regexFilter;
         _log =log;
         _res = interfaceClasss;
         _outputClasses = outputClasses;
-        _packagePrefix = packagePrefix;
     }
 
     @Override
@@ -68,7 +65,7 @@ public class DriftFileVisitor implements FileVisitor<Path> {
             className = className
                     .substring(1, className.length() - CLASS_EXT.length()) // remove leading "\" and ending ".class"
                     ;
-            _outputClasses.add( _packagePrefix + className); //append prefix 'drift' at begining
+            _outputClasses.add( className); //append prefix 'drift' at begining
             _log.debug(String.format("check class name: %s", className));
             //bug!? il doppio dollaro manda in blocco il check!! allora escludo dal check stringhe con piu di un dollaro
             if (className.indexOf(DOLLAR_INNER_CLASS) == className.lastIndexOf(DOLLAR_INNER_CLASS)) {

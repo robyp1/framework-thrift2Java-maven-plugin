@@ -148,7 +148,7 @@ public class Java2CxfWsMojo extends AbstractMojo {
                     Path pathToClassesAbs = Paths.get(outputDirectoryDrift.toURI());
                     Set<String> outputclasses = new HashSet<>();
                     DriftFileVisitor driftFileVisitor
-                            = new DriftFileVisitor(pathToClassesAbs, SERVICE_PATTERN_CLASS.pattern(), log, interfaceClassNames, outputclasses,"drift.");
+                            = new DriftFileVisitor(pathToClassesAbs, SERVICE_PATTERN_CLASS.pattern(), log, interfaceClassNames, outputclasses);//"drift."
                     try {
                         Files.walkFileTree(pathToClassesAbs, driftFileVisitor);
                     } catch (IOException e1)
