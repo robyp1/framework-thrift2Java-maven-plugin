@@ -1,13 +1,16 @@
 package factory.framework;
 
+import net.bytebuddy.ByteBuddy;
+import net.bytebuddy.ClassFileVersion;
+import net.bytebuddy.description.annotation.AnnotationDescription;
 import org.apache.maven.plugin.logging.Log;
-
 import java.io.IOException;
+import java.net.URL;
 import java.nio.file.FileVisitResult;
 import java.nio.file.FileVisitor;
 import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.util.Set;
+import java.util.*;
 
 /**
  * For Walking a file tree
@@ -21,19 +24,25 @@ public class DriftFileVisitor implements FileVisitor<Path> {
     private final String _regexFilter;
     private final Log _log;
     private final Set<String> _res;
+    private final Set<String> _outputClasses;
+    private final String _packagePrefix;
 
     /**
      *
      * @param outputDirectory  directory where is possible to find classes- required
      * @param regexFilter filtering class name against a patter - optionally
      * @param log
-     * @param res Set of Drift Service classes ending with $Iface
+     * @param interfaceClasss Set of Drift Service classes ending with $Iface
+     * @param outputClasses Set of classes correspond ti outClassesUrl
+     * @param packagePrefix is the "drift" package root
      */
-    public DriftFileVisitor(Path outputDirectory, String regexFilter, Log log, Set<String> res) {
+    public DriftFileVisitor(Path outputDirectory, String regexFilter, Log log, Set<String> interfaceClasss, Set<String> outputClasses, String packagePrefix) {
         _outputDirectory = outputDirectory;
         _regexFilter = regexFilter;
         _log =log;
-        _res = res;
+        _res = interfaceClasss;
+        _outputClasses = outputClasses;
+        _packagePrefix = packagePrefix;
     }
 
     @Override
@@ -55,9 +64,11 @@ public class DriftFileVisitor implements FileVisitor<Path> {
             String outputclasses = file.toFile().getAbsolutePath();
             _log.debug("take classes dir [" + outputclasses + "] and remove target class [" + _outputDirectory + "]");
             String className = outputclasses.replace(_outputDirectory.toFile().getAbsolutePath(), ""); // remove ../target/classes prefix
+            className = className.replace("\\", "."); //substitute . insteaf of /
+            _outputClasses.add( _packagePrefix + className); //append prefix 'drift' at begining
             className = className
                     .substring(1, className.length() - CLASS_EXT.length()) // remove leading "\" and ending ".class"
-                    .replace("\\", ".");
+                    ;
             _log.debug(String.format("check class name: %s", className));
             //bug!? il doppio dollaro manda in blocco il check!! allora escludo dal check stringhe con piu di un dollaro
             if (className.indexOf(DOLLAR_INNER_CLASS) == className.lastIndexOf(DOLLAR_INNER_CLASS)) {
@@ -66,10 +77,13 @@ public class DriftFileVisitor implements FileVisitor<Path> {
                     _res.add("drift." + className); //add drift because is the package root
                     _log.debug(String.format("found class name service %s", className));
                 }
+
             }
         }
         return FileVisitResult.CONTINUE;
     }
+
+
 
     @Override
     public FileVisitResult visitFileFailed(Path file, IOException exc) throws IOException {

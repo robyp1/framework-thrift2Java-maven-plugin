@@ -1,5 +1,8 @@
 package factory.framework;
 
+import net.bytebuddy.ByteBuddy;
+import net.bytebuddy.ClassFileVersion;
+import net.bytebuddy.description.annotation.AnnotationDescription;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.BuildPluginManager;
@@ -12,16 +15,15 @@ import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
 
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlElement;
 import java.io.*;
 import java.net.URLClassLoader;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.nio.file.*;
 import java.util.*;
 import java.util.regex.Pattern;
 
 import static org.twdata.maven.mojoexecutor.MojoExecutor.*;
-import static org.twdata.maven.mojoexecutor.MojoExecutor.executionEnvironment;
 
 
 /**
@@ -75,7 +77,7 @@ import static org.twdata.maven.mojoexecutor.MojoExecutor.executionEnvironment;
  *
 
  */
-@Mojo(name = "Java2Ws", defaultPhase = LifecyclePhase.COMPILE)
+@Mojo(name = "Java2Ws", defaultPhase = LifecyclePhase.PROCESS_CLASSES)
 public class Java2CxfWsMojo extends AbstractMojo {
 
     public static final String ERROR_MSG_SERVICE_LIST_MISSING = "Error: services list missing! Put service list in ${project.basedir}/src/main/resources/META-INF/drift-services.list";
@@ -127,28 +129,52 @@ public class Java2CxfWsMojo extends AbstractMojo {
     @Component
     private BuildPluginManager pluginManager;
 
+//    @Parameter(property = "project.build.outputDirectory", required = true)
+//    private String classpath;
+//
+//    @Parameter(property = "project.compileClasspathElements", required = true)
+//    private List<?> classpathElements;
+
+
 
     public void execute() throws MojoExecutionException, MojoFailureException {
         Log log = getLog();
+        Utility utility = new Utility(log);
         try {
             if ( serviceListFile == null || !serviceListFile.isDirectory()   ) {
                 Map<String, String> serviceNames = getServiceListFromFile(serviceListFile);
                 try {
                     getLog().info("Search drift class in ... " + directoryClassAbsolute.getAbsolutePath());
-                    Utility utility = new Utility(getLog());
                     //carico le classi drift insieme a quelle del plugin
-                    utility.loadClasses(directoryClassAbsolute, URLClassLoader.class);
+                    ClassLoader classLoader = utility.loadClasses(directoryClassAbsolute, URLClassLoader.class);
+                    utility.getAllListClass(directoryClassAbsolute);
                     File outputDirectoryDrift = new File(directoryClassAbsolute, DRIFT_PARENT_DIR); // avoid to look into other no-java-class resources
                     //controllo che esistono classi con sintassi nomepackage1.nomepackage2...nomepackagen.nomeclasseService$Iface
-//                    Set<String> classNames = utility.getClassNames(outputDirectoryDrift, directoryClassAbsolute, SERVICE_PATTERN_CLASS.pattern(), DRIFT_PARENT_DIR);
-                    Set<String> classNames =new HashSet<>();
+//                    Set<String> interfaceClassNames = utility.getClassNames(outputDirectoryDrift, directoryClassAbsolute, SERVICE_PATTERN_CLASS.pattern(), DRIFT_PARENT_DIR);
+                    Set<String> interfaceClassNames = new HashSet<>();
                     Path pathToClassesAbs = Paths.get(outputDirectoryDrift.toURI());
-                    DriftFileVisitor driftFileVisitor = new DriftFileVisitor(pathToClassesAbs, SERVICE_PATTERN_CLASS.pattern(), log, classNames);
-                    Files.walkFileTree(pathToClassesAbs, driftFileVisitor);
-                    for (String className: classNames) {
-                        log.info("Found Service class " + className);
+                    Set<String> outputclasses = new HashSet<>();
+                    DriftFileVisitor driftFileVisitor
+                            = new DriftFileVisitor(pathToClassesAbs, SERVICE_PATTERN_CLASS.pattern(), log, interfaceClassNames, outputclasses,"drift");
+                    try {
+                        Files.walkFileTree(pathToClassesAbs, driftFileVisitor);
+                    } catch (IOException e1)
+                    {
+                        getLog().error(e1.getMessage());
+                        e1.printStackTrace();
                     }
-                    generateWsdl(classNames,serviceNames);
+                    try {
+                        for (String className : outputclasses){
+                                Class clazz = classLoader.loadClass(className); //le classi prima di essere redefinite da buddy devono essere caricare nel class loader
+                                addMissingAnnotation(clazz, pathToClassesAbs);
+                        }
+                        //genero i wsdl
+                        generateWsdl(interfaceClassNames,serviceNames);
+                    } catch (ClassNotFoundException e) {
+                        e.printStackTrace();
+                    }
+
+
                 } catch (Exception e) {
                     e.printStackTrace();
                     throw new IOException("Drift class not found! " + e.getMessage());
@@ -160,6 +186,25 @@ public class Java2CxfWsMojo extends AbstractMojo {
         catch (IOException e) {
               log.error(e.getMessage());
               throw new MojoExecutionException(e.getMessage(),e);
+        }
+    }
+
+    /**
+     * adding XmlElement(XlmAccessType.FIELD) for class className and save (overwrite) class to disk
+     * @param className name of class loaded in this ClassLoader
+     */
+    private void addMissingAnnotation(Class className, Path _outputDirectory) {
+        //addinbg annotation @XmlElement(XlmAccessType.FIELD) to class type
+        try {
+            getLog().debug("class " + className.getCanonicalName() + "loaded, redefine it, adding missing annotations");
+            new ByteBuddy(ClassFileVersion.JAVA_V7)
+                    .redefine(className)
+                    .annotateType(AnnotationDescription.Builder.ofType(XmlElement.class).define("value", XmlAccessType.FIELD).build())
+                    .make()
+                    .saveIn(_outputDirectory.toFile()); //salvo la classe modificata sovrascrivendo quella compilata
+        } catch (IOException e) {
+            e.printStackTrace();
+            getLog().error("Error adding annotation  @XmlElement(XlmAccessType.FIELD) for class "  + className + "!");
         }
     }
 
@@ -208,6 +253,7 @@ public class Java2CxfWsMojo extends AbstractMojo {
         //chiamata plugin java2ws di apache cxf versione 3.1.15 (come fatto nell'altro goal Thrift2Java per chiamare il plugin thrift)
         //la fase non viene passata perchè è la stessa del goal
         for (String className : classNames){
+            getLog().info("Found Service class " + className);
             int i = 0;
             Element[] elements = new Element[4];
             elements[i++] = new Element("className", className);
@@ -275,6 +321,90 @@ public class Java2CxfWsMojo extends AbstractMojo {
         return services;
 
     }
+
+
+//    private String getPathElement(String classpath) {
+//        String res = classpath;
+//        if (!classpath.startsWith("/")) {
+//            res = "/" + res;
+//        }
+//        return res;
+//    }
+//
+//    public void execute2() throws MojoExecutionException, MojoFailureException {
+//        final List<URL> urls = new ArrayList<>();
+//        try {
+//            urls.add(new URL("file://" + getPathElement(classpath) + "/"));
+//            for (Object classPathElement : classpathElements) {
+//                urls.add(new URL("file://" + getPathElement(classPathElement.toString())));
+//            }
+//        } catch (MalformedURLException e) {
+//            throw new MojoExecutionException("Failed to add classpath to classloader", e);
+//        }
+//
+//        getLog().debug("Services classpath:");
+//        for (URL url : urls) {
+//            getLog().debug(url.toString());
+//        }
+//
+//        final List<String> classesNames = new ArrayList<>();
+//
+//        Path classesPath = FileSystems.getDefault().getPath(classpath);
+//        try {
+//            Files.walkFileTree(classesPath, new FileVisitor<Path>() {
+//                @Override
+//                public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
+//                    return FileVisitResult.CONTINUE;
+//                }
+//
+//                @Override
+//                public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+//                    try {
+//                        if (file != null && file.toString().endsWith(".class")) {
+//                            classesNames.add(file.toString().substring(classpath.length() + 1, file.toString().length() - 6).replace('/', '.').replace('\\', '.'));
+//                        }
+//                    } catch (Exception e) {
+//                        getLog().warn("Cannot add " + file + " to the classes: " + e.getMessage());
+//                        getLog().debug(e);
+//                    }
+//
+//                    return FileVisitResult.CONTINUE;
+//                }
+//
+//                @Override
+//                public FileVisitResult visitFileFailed(Path file, IOException exc) throws IOException {
+//                    return FileVisitResult.CONTINUE;
+//                }
+//
+//                @Override
+//                public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
+//                    return FileVisitResult.CONTINUE;
+//                }
+//            });
+//        } catch (IOException e) {
+//            getLog().warn("Cannot scan the classpath " + classesPath + ": " + e.getMessage());
+//            getLog().debug(e);
+//        }
+//
+//        ClassLoader loader = new URLClassLoader(urls.toArray(new URL[urls.size()]));
+//
+//        getLog().debug("Scanning for services...");
+//
+//        for (String className : classesNames) {
+//            try {
+//                getLog().debug("Checking " + className);
+//                getLog().info("Checking " + className);
+//                Class clazz = loader.loadClass(className);
+//                if (clazz != null && clazz.isInterface()) {
+//                    getLog().info("Found!!!!!!");
+//                    getLog().info(clazz.getName());
+//
+//                }
+//            } catch (ClassNotFoundException e) {
+//                throw new MojoExecutionException(String.format("Failed to load class %s", className), e);
+//            }
+//        }
+//    }
 
 
 }

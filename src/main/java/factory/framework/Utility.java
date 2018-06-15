@@ -27,12 +27,13 @@ public class Utility {
         this.log= log;
     }
 
+
     /**
      * call loadClasses methods and list all classes in this classloader
      * @param driftClassAbsolutePath
      * @throws Exception
      */
-    public void getListClass(File driftClassAbsolutePath) throws Exception {
+    public void getAllListClass(File driftClassAbsolutePath) throws Exception {
         Class<URLClassLoader> urlClass = URLClassLoader.class;
         ClassLoader urlClassLoader = null;
         try {
@@ -70,7 +71,7 @@ public class Utility {
         Method addUrl = urlClass.getDeclaredMethod("addURL", new Class[]{URL.class});
         addUrl.setAccessible(true);
         addUrl.invoke(urlClassLoader, new Object[]{outputDirectoryURI.toURL()});
-        return classLoader;
+        return urlClassLoader;
     }
 
 
