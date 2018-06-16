@@ -16,6 +16,7 @@ import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
 
+import javax.jws.WebService;
 import javax.xml.bind.annotation.*;
 import java.io.*;
 import java.nio.file.*;
@@ -159,9 +160,7 @@ public class Java2CxfWsMojo extends AbstractMojo {
                         for (String className : outputclasses){
 //                          //le classi prima di essere redefinite da buddy devono essere caricare nel class loader
                             Class clazz = Class.forName(className);
-                            if (!clazz.isInterface()) {
-                                addMissingAnnotation(clazz, pathToClassesAbs);
-                            }
+                            addMissingAnnotation(clazz, pathToClassesAbs);
                         }
                         //genero i wsdl
                         generateWsdl(interfaceClassNames,serviceNames);
@@ -185,27 +184,42 @@ public class Java2CxfWsMojo extends AbstractMojo {
     }
 
     /**
-     * adding @XmlAccessorType(XlmAccessType.FIELD) for class className and save (overwrite) class to disk
+     * Apache CXF java2ws classes rules (all classes, except enums type,  must respect these contracts):
+     * if class adding @XmlAccessorType(XlmAccessType.FIELD) for class className and save (overwrite) class to disk
+     * if interface  Iface adding @Webservice annotation and  save (overwrite) class to disk
+     * For each class with a list, adding to list the annotation @XmlElementWrapper(name=) and @XmlElement(name)
      * @param className name of class loaded in this ClassLoader
      */
     private void addMissingAnnotation(Class className, Path _outputDirectory) {
         //addinbg annotation @XmlAccessorType(XmlAccessorType.FIELD) to class type
         try {
-            getLog().debug("class " + className.getCanonicalName() + "loaded, redefine it, adding missing annotations");
-            new ByteBuddy(ClassFileVersion.JAVA_V7)
-                    .redefine(className)
-                    .annotateType(
-                            AnnotationDescription.Builder.ofType(XmlRootElement.class).build(),
-                            AnnotationDescription.Builder.ofType(XmlAccessorType.class).define("value", XmlAccessType.FIELD).build())
-                    .field( ElementMatchers.fieldType(List.class))
-                            .annotateField( AnnotationDescription.Builder.ofType(XmlElementWrapper.class).define("name","elementWrap1").build(),
-                                            AnnotationDescription.Builder.ofType(XmlElement.class).define("name", "element1").build()
-                                           )
-                    .make()
-                    .saveIn(_outputDirectory.toFile()); //salvo la classe modificata sovrascrivendo quella compilata
+            getLog().info("class " + className.getCanonicalName() + "loaded, redefine it, adding missing annotations");
+            List<AnnotationDescription> annotations = new ArrayList<>();
+            //gli enum non hanno annotazioni, invece per altri tipi:
+            if (!className.isEnum()) {
+                //se è una interfaccia Iface deve avere l'annotazione @WebService
+                if (className.isInterface() && className.getCanonicalName().endsWith("$Iface")) {
+                    annotations.add(AnnotationDescription.Builder.ofType(WebService.class).build());
+                }
+                //altrimenti se è una classe di input output del servizio
+                else {
+                    // aggiungo sulla classe l'annotazione @XmlAccessorType(XmlAccessType.FIELD)
+                    annotations.add(AnnotationDescription.Builder.ofType(XmlAccessorType.class).define("value", XmlAccessType.FIELD).build());
+                    new ByteBuddy(ClassFileVersion.JAVA_V7)
+                            .redefine(className)
+                            .annotateType(
+                                    annotations)
+                            .field(ElementMatchers.fieldType(List.class)) //per ogni List nella classe aggiungo @XmlElementWrapper e @XmlElement
+                            .annotateField(AnnotationDescription.Builder.ofType(XmlElementWrapper.class).define("name", "elementWrap1").build(),
+                                    AnnotationDescription.Builder.ofType(XmlElement.class).define("name", "element1").build()
+                            )
+                            .make()
+                            .saveIn(_outputDirectory.toFile()); //salvo la classe modificata sovrascrivendo quella compilata
+                }
+            }
         } catch (IOException e) {
             e.printStackTrace();
-            getLog().error("Error adding annotation  @XmlElement(XlmAccessType.FIELD) for class "  + className + "!");
+            getLog().error("Error adding annotations for class "  + className + "!");
         }
     }
 
