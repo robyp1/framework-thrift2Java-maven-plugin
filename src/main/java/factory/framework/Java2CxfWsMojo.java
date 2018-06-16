@@ -197,8 +197,10 @@ public class Java2CxfWsMojo extends AbstractMojo {
                     .annotateType(
                             AnnotationDescription.Builder.ofType(XmlRootElement.class).build(),
                             AnnotationDescription.Builder.ofType(XmlAccessorType.class).define("value", XmlAccessType.FIELD).build())
-                    .field(
-                            ElementMatchers.fieldType(List.class)).annotateField(AnnotationDescription.Builder.ofType(XmlElementWrapper.class).define("name","x").build())
+                    .field( ElementMatchers.fieldType(List.class))
+                            .annotateField( AnnotationDescription.Builder.ofType(XmlElementWrapper.class).define("name","elementWrap1").build(),
+                                            AnnotationDescription.Builder.ofType(XmlElement.class).define("name", "element1").build()
+                                           )
                     .make()
                     .saveIn(_outputDirectory.toFile()); //salvo la classe modificata sovrascrivendo quella compilata
         } catch (IOException e) {
