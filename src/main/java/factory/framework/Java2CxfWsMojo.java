@@ -3,6 +3,7 @@ package factory.framework;
 import net.bytebuddy.ByteBuddy;
 import net.bytebuddy.ClassFileVersion;
 import net.bytebuddy.description.annotation.AnnotationDescription;
+import net.bytebuddy.matcher.ElementMatchers;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.BuildPluginManager;
@@ -15,9 +16,7 @@ import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
 
-import javax.xml.bind.annotation.XmlAccessType;
-import javax.xml.bind.annotation.XmlAccessorType;
-import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.*;
 import java.io.*;
 import java.nio.file.*;
 import java.util.*;
@@ -160,7 +159,9 @@ public class Java2CxfWsMojo extends AbstractMojo {
                         for (String className : outputclasses){
 //                          //le classi prima di essere redefinite da buddy devono essere caricare nel class loader
                             Class clazz = Class.forName(className);
-                            addMissingAnnotation(clazz, pathToClassesAbs);
+                            if (!clazz.isInterface()) {
+                                addMissingAnnotation(clazz, pathToClassesAbs);
+                            }
                         }
                         //genero i wsdl
                         generateWsdl(interfaceClassNames,serviceNames);
@@ -193,7 +194,11 @@ public class Java2CxfWsMojo extends AbstractMojo {
             getLog().debug("class " + className.getCanonicalName() + "loaded, redefine it, adding missing annotations");
             new ByteBuddy(ClassFileVersion.JAVA_V7)
                     .redefine(className)
-                    .annotateType(AnnotationDescription.Builder.ofType(XmlAccessorType.class).define("value", XmlAccessType.FIELD).build())
+                    .annotateType(
+                            AnnotationDescription.Builder.ofType(XmlRootElement.class).build(),
+                            AnnotationDescription.Builder.ofType(XmlAccessorType.class).define("value", XmlAccessType.FIELD).build())
+                    .field(
+                            ElementMatchers.fieldType(List.class)).annotateField(AnnotationDescription.Builder.ofType(XmlElementWrapper.class).define("name","x").build())
                     .make()
                     .saveIn(_outputDirectory.toFile()); //salvo la classe modificata sovrascrivendo quella compilata
         } catch (IOException e) {
@@ -201,6 +206,7 @@ public class Java2CxfWsMojo extends AbstractMojo {
             getLog().error("Error adding annotation  @XmlElement(XlmAccessType.FIELD) for class "  + className + "!");
         }
     }
+
 
     /**
      * chiamo plugin apache cxf
