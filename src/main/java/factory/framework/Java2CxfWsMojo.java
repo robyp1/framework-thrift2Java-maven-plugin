@@ -206,7 +206,8 @@ public class Java2CxfWsMojo extends AbstractMojo {
                     // aggiungo sulla classe l'annotazione @XmlAccessorType(XmlAccessType.FIELD)
                     annotations.add(AnnotationDescription.Builder.ofType(XmlAccessorType.class).define("value", XmlAccessType.FIELD).build());
                 }
-                AnnotationDescription annotationsArray[] = new AnnotationDescription[annotations.size()];
+                if (annotations.size() > 0) {
+                    AnnotationDescription annotationsArray[] = new AnnotationDescription[annotations.size()];
                     new ByteBuddy(ClassFileVersion.JAVA_V7)
                             .redefine(className)
                             .annotateType(
@@ -217,6 +218,7 @@ public class Java2CxfWsMojo extends AbstractMojo {
                             )
                             .make()
                             .saveIn(_outputDirectory.toFile()); //salvo la classe modificata sovrascrivendo quella compilata
+                }
             }
         } catch (IOException e) {
             e.printStackTrace();
