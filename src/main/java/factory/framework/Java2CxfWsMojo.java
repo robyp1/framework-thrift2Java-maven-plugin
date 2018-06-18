@@ -186,20 +186,29 @@ public class Java2CxfWsMojo extends AbstractMojo {
     /**
      * Apache CXF java2ws classes rules (all classes, except enums type,  must respect these contracts):
      * if class adding @XmlAccessorType(XlmAccessType.FIELD) for class className and save (overwrite) class to disk
-     * if interface  Iface adding @Webservice annotation and  save (overwrite) class to disk
+     * if interface  Iface adding @Webservice annotation and  save (overwrite) class to disk.
+     * Web Service name is the name of class (preceding .Iface) postfixed with Iface, for ex SharedService_Iface
+     * and the Port name is the same name of service prostfixed with IfacePort, for example SharedService_IfacePort
      * For each class with a list, adding to list the annotation @XmlElementWrapper(name=) and @XmlElement(name)
      * @param className name of class loaded in this ClassLoader
      */
     private void addMissingAnnotation(Class className, Path _outputDirectory) {
         //addinbg annotation @XmlAccessorType(XmlAccessorType.FIELD) to class type
         try {
-            getLog().info("class " + className.getCanonicalName() + "loaded, redefine it, adding missing annotations");
+            getLog().info("class " + className.getCanonicalName() + " loaded, redefine it, adding missing annotations");
             List<AnnotationDescription> annotations = new ArrayList<>();
             //gli enum non hanno annotazioni, invece per altri tipi:
             if (!className.isEnum()) {
                 //se è una interfaccia Iface deve avere l'annotazione @WebService
-                if (className.isInterface() && className.getCanonicalName().endsWith("$Iface")) {
-                    annotations.add(AnnotationDescription.Builder.ofType(WebService.class).build());
+                String canonicalClassName = className.getCanonicalName();
+                if (className.isInterface() && canonicalClassName.endsWith(".Iface")) {
+                    String classDefName = canonicalClassName.substring(0,canonicalClassName.length() - ".Iface".length());
+                    String classServiceName = classDefName.substring(classDefName.lastIndexOf(".")+1);
+                    annotations.add(AnnotationDescription.Builder.ofType(WebService.class)
+                            .define("name",classServiceName + "_Iface")
+                            .define("serviceName",classServiceName + "_Iface")
+                            .define("portName", classServiceName + "_IfacePort")
+                            .build());
                 }
                 //altrimenti se è una classe di input output del servizio
                 else {
