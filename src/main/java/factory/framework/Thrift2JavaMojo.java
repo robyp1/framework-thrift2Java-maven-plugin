@@ -54,7 +54,7 @@ public class Thrift2JavaMojo extends AbstractMojo {
     /**
      * where to put generated java files
      */
-    @Parameter (defaultValue = "${project.basedir}/target/generated-sources/drift", readonly = true)
+    @Parameter (defaultValue = "${project.basedir}/target/generated-sources", readonly = true)
     private String outputDirectory;
 
 

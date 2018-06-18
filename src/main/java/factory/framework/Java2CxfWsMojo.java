@@ -217,7 +217,7 @@ public class Java2CxfWsMojo extends AbstractMojo {
                                     AnnotationDescription.Builder.ofType(XmlElement.class).define("name", "element1").build()
                             )
                             .make()
-                            .saveIn(_outputDirectory.toFile()); //salvo la classe modificata sovrascrivendo quella compilata
+                            .saveIn(_outputDirectory.getParent().toFile()); //salvo la classe modificata sovrascrivendo quella compilata
                 }
             }
         } catch (IOException e) {
