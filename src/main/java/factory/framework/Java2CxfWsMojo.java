@@ -4,6 +4,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import net.bytebuddy.ByteBuddy;
 import net.bytebuddy.ClassFileVersion;
 import net.bytebuddy.description.annotation.AnnotationDescription;
+import net.bytebuddy.description.field.FieldDescription;
+import net.bytebuddy.description.field.FieldList;
+import net.bytebuddy.dynamic.DynamicType;
 import net.bytebuddy.matcher.ElementMatchers;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.plugin.AbstractMojo;
@@ -142,7 +145,7 @@ public class Java2CxfWsMojo extends AbstractMojo {
 //                    utility.getAllListClass(directoryClassAbsolute);
                     utility.loadClasses(directoryClassAbsolute);
                     getLog().debug("After Load drift classes:");
-                    utility.getAllListClass(directoryClassAbsolute);
+//                    utility.getAllListClass(directoryClassAbsolute);
                     File outputDirectoryDrift = new File(directoryClassAbsolute, DRIFT_PARENT_DIR); // avoid to look into other no-java-class resources
                     //controllo che esistono classi con sintassi nomepackage1.nomepackage2...nomepackagen.nomeclasseService$Iface
                     Set<String> interfaceClassNames = new HashSet<>();
@@ -196,7 +199,7 @@ public class Java2CxfWsMojo extends AbstractMojo {
     private void addMissingAnnotation(Class className, Path _outputDirectory) {
         //addinbg annotation @XmlAccessorType(XmlAccessorType.FIELD) to class type
         try {
-            getLog().info("class " + className.getCanonicalName() + " loaded, redefine it, adding missing annotations");
+            getLog().debug("class " + className.getCanonicalName() + " loaded, redefine it, adding missing annotations");
             List<AnnotationDescription> annotations = new ArrayList<>();
             //gli enum non hanno annotazioni, invece per altri tipi:
             if (!className.isEnum()) {
@@ -222,19 +225,47 @@ public class Java2CxfWsMojo extends AbstractMojo {
                             .redefine(className)
                             .annotateType(
                                     annotations.toArray(annotationsArray))
-                            .field(ElementMatchers.fieldType(List.class)) //per ogni List nella classe aggiungo @XmlElementWrapper e @XmlElement
-                            .annotateField(AnnotationDescription.Builder.ofType(XmlElementWrapper.class).build(),
-                                    AnnotationDescription.Builder.ofType(XmlElement.class).build(),
-                                    AnnotationDescription.Builder.ofType(JsonProperty.class).build()
-                            )
+//                            .field(ElementMatchers.fieldType(List.class)) //per ogni List nella classe aggiungo @XmlElementWrapper e @XmlElement
+//                            .annotateField(AnnotationDescription.Builder.ofType(XmlElementWrapper.class).build(),
+//                                    AnnotationDescription.Builder.ofType(XmlElement.class).build(),
+//                                    AnnotationDescription.Builder.ofType(JsonProperty.class).build()
+//                            )
                             .make()
                             .saveIn(_outputDirectory.getParent().toFile()); //salvo la classe modificata sovrascrivendo quella compilata
                 }
+                //ricavo i campi della classe
+                DynamicType.Unloaded unloadclassModifier = new ByteBuddy(ClassFileVersion.JAVA_V7)
+                        .redefine(className).make();
+                FieldList<FieldDescription.InDefinedShape> declaredFields = unloadclassModifier.getTypeDescription().getDeclaredFields();
+                //se ha dei campi di tipo java.utill.List
+                for (FieldDescription.InDefinedShape field :declaredFields){
+                    if (field.getType().getTypeName().contains("java.util.List")){
+                        String name = isnull(field.getName(), field.getActualName());
+                        String nameList = name;
+                        if (!name.endsWith("List")) {
+                            nameList = nameList.concat("List");
+                        }
+                        new ByteBuddy(ClassFileVersion.JAVA_V7)
+                                .redefine(className)
+                                .field(ElementMatchers.named(name)) //per ogni List nella classe aggiungo @XmlElementWrapper e @XmlElement
+                                .annotateField(AnnotationDescription.Builder.ofType(XmlElementWrapper.class).define("name", nameList).build(),
+                                        AnnotationDescription.Builder.ofType(XmlElement.class).define("name", name).build(),
+                                        AnnotationDescription.Builder.ofType(JsonProperty.class).define("value", nameList).build()
+                                        )
+                                .make()
+                                .saveIn(_outputDirectory.getParent().toFile());
+                    }
+                }
+
             }
         } catch (IOException e) {
             e.printStackTrace();
             getLog().error("Error adding annotations for class "  + className + "!");
         }
+    }
+
+    private static String isnull(String opzione1, String opzione2) {
+        return (opzione1 == null) ? opzione2 : opzione1 ;
     }
 
 
