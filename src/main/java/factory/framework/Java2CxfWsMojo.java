@@ -1,5 +1,6 @@
 package factory.framework;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import net.bytebuddy.ByteBuddy;
 import net.bytebuddy.ClassFileVersion;
 import net.bytebuddy.description.annotation.AnnotationDescription;
@@ -223,7 +224,8 @@ public class Java2CxfWsMojo extends AbstractMojo {
                                     annotations.toArray(annotationsArray))
                             .field(ElementMatchers.fieldType(List.class)) //per ogni List nella classe aggiungo @XmlElementWrapper e @XmlElement
                             .annotateField(AnnotationDescription.Builder.ofType(XmlElementWrapper.class).build(),
-                                    AnnotationDescription.Builder.ofType(XmlElement.class).build()
+                                    AnnotationDescription.Builder.ofType(XmlElement.class).build(),
+                                    AnnotationDescription.Builder.ofType(JsonProperty.class).build()
                             )
                             .make()
                             .saveIn(_outputDirectory.getParent().toFile()); //salvo la classe modificata sovrascrivendo quella compilata
