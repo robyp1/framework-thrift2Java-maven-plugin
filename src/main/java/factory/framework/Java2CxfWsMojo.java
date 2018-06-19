@@ -222,8 +222,8 @@ public class Java2CxfWsMojo extends AbstractMojo {
                             .annotateType(
                                     annotations.toArray(annotationsArray))
                             .field(ElementMatchers.fieldType(List.class)) //per ogni List nella classe aggiungo @XmlElementWrapper e @XmlElement
-                            .annotateField(AnnotationDescription.Builder.ofType(XmlElementWrapper.class).define("name", "elementWrap1").build(),
-                                    AnnotationDescription.Builder.ofType(XmlElement.class).define("name", "element1").build()
+                            .annotateField(AnnotationDescription.Builder.ofType(XmlElementWrapper.class).build(),
+                                    AnnotationDescription.Builder.ofType(XmlElement.class).build()
                             )
                             .make()
                             .saveIn(_outputDirectory.getParent().toFile()); //salvo la classe modificata sovrascrivendo quella compilata
