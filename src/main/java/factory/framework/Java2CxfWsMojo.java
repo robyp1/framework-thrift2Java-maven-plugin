@@ -298,6 +298,7 @@ public class Java2CxfWsMojo extends AbstractMojo {
      * es:
      * META-INF/wsdl/drift-thrift@SharedService.wsdl -> SharedService$Iface
      * (SharedService sarà la class name e SharedService.wsdl il nome del wsdl)
+     * @code {
      * <plugin>
      <groupId>org.apache.cxf</groupId>
      <artifactId>cxf-java2ws-plugin</artifactId>
@@ -329,6 +330,7 @@ public class Java2CxfWsMojo extends AbstractMojo {
      </execution>
      </executions>
      </plugin>
+        }
      * @param classNames
      * @param serviceNames
      */
