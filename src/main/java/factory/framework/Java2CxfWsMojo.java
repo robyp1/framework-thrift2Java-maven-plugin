@@ -23,6 +23,7 @@ import org.apache.maven.project.MavenProject;
 //import javax.jws.WebService;
 import javax.xml.bind.annotation.*;
 import java.io.*;
+import java.net.URI;
 import java.nio.file.*;
 import java.util.*;
 import java.util.regex.Pattern;
@@ -32,8 +33,10 @@ import static org.twdata.maven.mojoexecutor.MojoExecutor.*;
 
 /**
  *
- * Generate wsdl descriptor from service class after maven compile phase (phase process classes in maven build lifecycle)
+ * Generate wsdl descriptor from service class at the end of maven compile phase (phase process classes in maven build lifecycle)
+ * and before packaging pahse in a jar or war, you must run with clean install
  * @link https://maven.apache.org/guides/introduction/introduction-to-the-lifecycle.html
+ *
  * This is executed after compile phase (live <phase>empty in plugin execution)
  *
  *  services belongs to package: drift.< progetto >.< modulo >.api.< servizio >.nomeService.class
@@ -79,7 +82,28 @@ import static org.twdata.maven.mojoexecutor.MojoExecutor.*;
  *            -verbose \
  *            drift.drift.thrift.api.shared.SharedService$Iface
  *
-
+ * How to include
+ * * @code{
+ * 		<plugin>
+        <groupId>factory.framework</groupId>
+        <artifactId>framework-thrift2Java-maven-plugin</artifactId>
+        <version>2.6.0-SNAPSHOT</version>
+        <configuration>
+        <thriftExecutable>C:/Program Files (x86)/Apache/thrift/bin/thrift</thriftExecutable>
+        <thriftSourceRoot>${project.basedir}/src/main/thrift</thriftSourceRoot>
+        <!--<outputDirectory>${project.basedir}/src/main/java/drift</outputDirectory>-->
+        </configuration>
+        <executions>
+        <execution>
+        <!--<phase>non serve</phase>-->
+        <goals>
+        <goal>genjava</goal> <!--indicare entrambi le fasi verranno seguite in sequenza in fase di clean install o compile-->
+        <goal>Java2Ws</goal>
+        </goals>
+        </execution>
+        </executions>
+        </plugin>
+    }
  */
 @Mojo(name = "Java2Ws", defaultPhase = LifecyclePhase.PROCESS_CLASSES)
 public class Java2CxfWsMojo extends AbstractMojo {
@@ -95,6 +119,8 @@ public class Java2CxfWsMojo extends AbstractMojo {
     public static final String DRIFT_PARENT_DIR = "drift";
     public static final String LIBTHRIF_VERSION = "0.11.0";
     public static final String SRC_RESOURCES_DIR_PROJ = "/src/resources/";
+    public static final String JAVA_2_WS_GOAL_NAME = "java2ws";
+    public static final String COPY_RESOURCES_GOAL_NAME = "copy-resources";
 
     /**
      * where is the list of services , is not set by plugin configuration
@@ -320,8 +346,9 @@ public class Java2CxfWsMojo extends AbstractMojo {
             String classNameInner = splitpackages[splitpackages.length-1];
             String classServiceName = classNameInner.substring(0, (classNameInner.indexOf("Iface")-1));
             String wsdlOutputFile = serviceNames.get(classServiceName);
-            getLog().info("take class interface "+classServiceName + ", will output to " + wsdlOutputFile );
-            elements[i++] = new Element("outputFile",  directoryClassAbsolute  + File.separator + wsdlOutputFile);
+            String outputWsdl = directoryClassAbsolute + File.separator + wsdlOutputFile;
+            getLog().info("take class interface "+classServiceName + ", will output to " + outputWsdl );
+            elements[i++] = new Element("outputFile", outputWsdl);
             executeMojo(
                     plugin(
                             groupId("org.apache.cxf"),
@@ -333,7 +360,7 @@ public class Java2CxfWsMojo extends AbstractMojo {
                                     dependency("org.apache.thrift","libthrift", LIBTHRIF_VERSION)
                             )
                     ),
-                    goal("java2ws"),
+                    goal(JAVA_2_WS_GOAL_NAME),
                     configuration(
                             elements
                     ),
@@ -343,10 +370,16 @@ public class Java2CxfWsMojo extends AbstractMojo {
                             pluginManager
                     )
             );
+            //copy target/classes/META-INF/wsdl/servizio.wsdl to src/resources/META-INF/
+            Path toDir = Paths.get(serviceListFile.toURI()).getParent().getParent().toAbsolutePath();
+            Path fromDirAndFileName = Paths.get(new File(outputWsdl).toURI());
+            new Utility(getLog()).copyFromFileToPath(wsdlOutputFile, fromDirAndFileName,toDir);
         }
 
 
     }
+
+
 
     private Map<String,String> getServiceListFromFile(File serviceListFile) throws IOException {
         Map<String,String> services = new HashMap<>();

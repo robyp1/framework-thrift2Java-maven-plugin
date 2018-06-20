@@ -3,12 +3,16 @@ package factory.framework;
 import org.apache.maven.plugin.logging.Log;
 
 import java.io.File;
+import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
@@ -72,6 +76,22 @@ public class Utility {
         addUrl.setAccessible(true);
         addUrl.invoke(urlClassLoader, new Object[]{outputDirectoryURI.toURL()});
         return urlClassLoader;
+    }
+
+    /**
+     * copy a file (absolute path with file name and extension) to path
+     * @param relativePathWsdl path relative to file (maybe resource dir), within file name for ex: META-INF/wsdl/drift-thrift@SharedService.wsdl
+     *                         (which is in project.basedir/src/main/resources)
+     * @param fromDirFileName directory where copy file, as absolute path  (include wsdl file name) ex: project.basedir/classes/target/META-INF/wsdl/drift-thrift@SharedService.wsdl
+     * @param  toDirAbsolute  destination directory of file to be copied (don't append relativePathWsdl  for ex: project.basedir/src/main/resources)
+     */
+    public void copyFromFileToPath(String relativePathWsdl, Path fromDirFileName, Path toDirAbsolute) {
+            Path destinationFile = toDirAbsolute.resolve(relativePathWsdl);//append relativePathWsdl path (must be relative) to toDirAbolute(must be absolute path)
+            try {
+                Files.copy(fromDirFileName, destinationFile, StandardCopyOption.REPLACE_EXISTING);
+            } catch (IOException e) {
+                log.error(String.format("impossible copy  from %s to %s", fromDirFileName.toString(),destinationFile), e);
+            }
     }
 
 }

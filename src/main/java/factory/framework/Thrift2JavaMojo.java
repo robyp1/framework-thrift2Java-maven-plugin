@@ -28,6 +28,30 @@ import static org.twdata.maven.mojoexecutor.MojoExecutor.*;
  *
  * The default output java dir is "${project.basedir}/target/generated-sources/drift
  * (dove ci sono i sorgenti java generati dal thrift plugin)
+ *
+ * Plugin must have this configuaration,
+ * this goal(generate resources) and the other (PROCCESS_CLASS) are within compile or clean install pahse
+ * @code{
+ * 		<plugin>
+        <groupId>factory.framework</groupId>
+        <artifactId>framework-thrift2Java-maven-plugin</artifactId>
+        <version>2.6.0-SNAPSHOT</version>
+        <configuration>
+        <thriftExecutable>C:/Program Files (x86)/Apache/thrift/bin/thrift</thriftExecutable>
+        <thriftSourceRoot>${project.basedir}/src/main/thrift</thriftSourceRoot>
+        <!--<outputDirectory>${project.basedir}/src/main/java/drift</outputDirectory>-->
+        </configuration>
+        <executions>
+        <execution>
+        <!--<phase>non serve</phase>-->
+        <goals>
+        <goal>genjava</goal> <!--indicare entrambi le fasi verranno seguite in sequenza in fase di clean install o compile-->
+        <goal>Java2Ws</goal>
+        </goals>
+        </execution>
+        </executions>
+        </plugin>
+ }
  */
 
 @Mojo(name = "genjava", defaultPhase = LifecyclePhase.GENERATE_SOURCES)
@@ -94,31 +118,33 @@ public class Thrift2JavaMojo extends AbstractMojo {
 
     /**
      * Esegue questo plugin
-     <plugin>
-     <groupId>org.apache.thrift</groupId>
-     <artifactId>thrift-maven-plugin</artifactId>
-     <version>1.0-SNAPSHOT</version>
-     <configuration>
-     <thriftExecutable>C:/Program Files (x86)/Apache/thrift/bin/thrift</thriftExecutable>
-     <thriftSourceRoot>${project.basedir}/src/main/thrift</thriftSourceRoot>
-     </configuration>
-     <executions>
-     <execution>
-     <id>thrift-sources</id>
-     <phase>generate-sources</phase>
-     <goals>
-     <goal>compile</goal>
-     </goals>
-     </execution>
-     <execution>
-     <id>thrift-test-sources</id>
-     <phase>generate-test-sources</phase>
-     <goals>
-     <goal>testCompile</goal>
-     </goals>
-     </execution>
-     </executions>
-     </plugin>
+     * @code {
+         <plugin>
+         <groupId>org.apache.thrift</groupId>
+         <artifactId>thrift-maven-plugin</artifactId>
+         <version>1.0-SNAPSHOT</version>
+         <configuration>
+         <thriftExecutable>C:/Program Files (x86)/Apache/thrift/bin/thrift</thriftExecutable>
+         <thriftSourceRoot>${project.basedir}/src/main/thrift</thriftSourceRoot>
+         </configuration>
+         <executions>
+         <execution>
+         <id>thrift-sources</id>
+         <phase>generate-sources</phase>
+         <goals>
+         <goal>compile</goal>
+         </goals>
+         </execution>
+         <execution>
+         <id>thrift-test-sources</id>
+         <phase>generate-test-sources</phase>
+         <goals>
+         <goal>testCompile</goal>
+         </goals>
+         </execution>
+         </executions>
+         </plugin>
+        }
      *
      * @throws MojoExecutionException
      */
