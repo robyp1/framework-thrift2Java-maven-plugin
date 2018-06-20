@@ -20,7 +20,7 @@ import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
 
-import javax.jws.WebService;
+//import javax.jws.WebService;
 import javax.xml.bind.annotation.*;
 import java.io.*;
 import java.nio.file.*;
@@ -94,6 +94,7 @@ public class Java2CxfWsMojo extends AbstractMojo {
     public static final String CXF_VERSION_JDK7_BYTECODE = "3.1.15";//last version compiled with jdk 1.7
     public static final String DRIFT_PARENT_DIR = "drift";
     public static final String LIBTHRIF_VERSION = "0.11.0";
+    public static final String SRC_RESOURCES_DIR_PROJ = "/src/resources/";
 
     /**
      * where is the list of services , is not set by plugin configuration
@@ -118,8 +119,8 @@ public class Java2CxfWsMojo extends AbstractMojo {
     /**
      * Project dir, this is not for plugin configuration tag
      */
-    @Parameter( defaultValue ="${project.build.directory}",readonly = true )
-    String projectDir;
+//    @Parameter( defaultValue ="${project.build.directory}",readonly = true )
+//    String projectDir;
 
     /**
      * The current Maven session.
@@ -203,8 +204,8 @@ public class Java2CxfWsMojo extends AbstractMojo {
             List<AnnotationDescription> annotations = new ArrayList<>();
             //gli enum non hanno annotazioni, invece per altri tipi:
             if (!className.isEnum()) {
-                //se è una interfaccia Iface deve avere l'annotazione @WebService
-                String canonicalClassName = className.getCanonicalName();
+                //se è una interfaccia Iface deve avere l'annotazione @WebService, commentato, mi hanno detto che è opzionale
+                /*String canonicalClassName = className.getCanonicalName();
                 if (className.isInterface() && canonicalClassName.endsWith(".Iface")) {
                     String classDefName = canonicalClassName.substring(0,canonicalClassName.length() - ".Iface".length());
                     String classServiceName = classDefName.substring(classDefName.lastIndexOf(".")+1);
@@ -213,9 +214,9 @@ public class Java2CxfWsMojo extends AbstractMojo {
                             .define("serviceName",classServiceName + "_Iface")
                             .define("portName", classServiceName + "_IfacePort")
                             .build());
-                }
+                }*/
                 //altrimenti se è una classe di input output del servizio
-                else {
+                if (!className.isInterface()) {
                     // aggiungo sulla classe l'annotazione @XmlAccessorType(XmlAccessType.FIELD)
                     annotations.add(AnnotationDescription.Builder.ofType(XmlAccessorType.class).define("value", XmlAccessType.FIELD).build());
                 }
@@ -225,11 +226,6 @@ public class Java2CxfWsMojo extends AbstractMojo {
                             .redefine(className)
                             .annotateType(
                                     annotations.toArray(annotationsArray))
-//                            .field(ElementMatchers.fieldType(List.class)) //per ogni List nella classe aggiungo @XmlElementWrapper e @XmlElement
-//                            .annotateField(AnnotationDescription.Builder.ofType(XmlElementWrapper.class).build(),
-//                                    AnnotationDescription.Builder.ofType(XmlElement.class).build(),
-//                                    AnnotationDescription.Builder.ofType(JsonProperty.class).build()
-//                            )
                             .make()
                             .saveIn(_outputDirectory.getParent().toFile()); //salvo la classe modificata sovrascrivendo quella compilata
                 }
@@ -325,7 +321,7 @@ public class Java2CxfWsMojo extends AbstractMojo {
             String classServiceName = classNameInner.substring(0, (classNameInner.indexOf("Iface")-1));
             String wsdlOutputFile = serviceNames.get(classServiceName);
             getLog().info("take class interface "+classServiceName + ", will output to " + wsdlOutputFile );
-            elements[i++] = new Element("outputFile",  projectDir + "/resources/" + wsdlOutputFile);
+            elements[i++] = new Element("outputFile",  directoryClassAbsolute  + File.separator + wsdlOutputFile);
             executeMojo(
                     plugin(
                             groupId("org.apache.cxf"),
